@@ -1,0 +1,7 @@
+{
+  "name": "os8104New",
+  "version": "1.0.0",
+  "dependencies": {
+    "spi-device": "^3.1.2"
+  }
+}
