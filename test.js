@@ -1,5 +1,13 @@
 
+const Dgram = require('./testclient')
 
-const OS8104A = require('./OS8104A')
+client = new Dgram("/tmp/SocketMost-client.sock", "/tmp/SocketMost.sock")
 
-const os8104a = new OS8104A(0x110, 0x22, 48)
+client.on("connect", () => {
+    console.log("connected")
+});
+
+client.on("data", (data) => {
+    let message = JSON.parse(data.toString())
+    console.log(message)
+})
