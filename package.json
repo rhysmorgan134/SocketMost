@@ -1,7 +1,9 @@
 {
-  "name": "os8104New",
+  "name": "OS8104A",
   "version": "1.0.0",
   "dependencies": {
-    "spi-device": "^3.1.2"
+    "onoff": "^6.0.3",
+    "spi-device": "^3.1.2",
+    "unix-dgram": "^2.0.6"
   }
 }

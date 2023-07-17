@@ -181,8 +181,18 @@ module.exports = {
     bIE_NET_CHANGED_INT_EN: 0x08,
     bIE_ERR_INT_EN: 0x04,
     bIE_TX_INT_EN: 0x02,
-    bIE_RX_INT_EN: 0x01
+    bIE_RX_INT_EN: 0x01,
 
+    //Register source control 2
+    bSDC2_SCK_8F: 0x0,
+    bSDC2_SCK_16F: 0x20,
+    bSDC2_SCK_32F: 0x40,
+    bSDC2_SCK_64F: 0x60,
+    bSDC2_SCK_128F: 0x80,
+    bSDC2_SCK_256F: 0xA0,
 
+    //Clock Manager 2
+    bCM2_UNLOCKED: 0x80,
+    BCM2_NETWORK_ACTIVITY: 0x40
 
 }
