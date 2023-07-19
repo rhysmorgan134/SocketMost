@@ -121,12 +121,7 @@ npm install
 
 Once finished we can daemonise the process
 
-Make a systemd user folder
-```shell
-mkdir -p ~/.config/systemd/user
-```
-
-Now get the current directory 
+Get the current directory 
 ```shell
 pwd
 ```
@@ -140,10 +135,10 @@ same besides the user pi
 
 Take note of this, and then create a systemd file
 ```shell
-nano /etc/systemd/system/socketmost.service 
+sudo nano /etc/systemd/system/socketmost.service 
 ```
 
-Paste the below code into the file, if needed change line that begins with ExecStart to match your path from above, if the user is not
+Paste the below code into the file, if needed change line that begins with ExecStart and working directory to match your path from above, if the user is not
 pi then also change that value to match your username.
 ```shell
 [Unit]
@@ -153,6 +148,7 @@ After=network.target
 [Service]
 ExecStart=node /home/pi/SocketMost/SocketMost.js
 Restart=always
+WorkingDirectory=/home/pi/SocketMost/
 User=pi
 
 [Install]
