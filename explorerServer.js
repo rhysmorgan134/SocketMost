@@ -1,31 +1,11 @@
-const Dgram = require('./testclient')
-const dgram = require('dgram');
+const {SocketMostClient} = require("socketmost-client");
+const most = new SocketMostClient()
+const dgram = require('dgram')
 const socket = dgram.createSocket('udp4');
 const io = require('socket.io')()
 
-client = new Dgram("/tmp/SocketMost-client.sock", "/tmp/SocketMost.sock")
-
-client.on("connect", () => {
-    console.log("connected")
-
-});
-
-client.on("data", (data) => {
-    let message = JSON.parse(data.toString())
-    message.data = Buffer.from(message.data)
-    let dataOut = {
-        fBlockID: message.data.readUint8(0),
-        instanceID: message.data.readUint8(1),
-        fktID: (message.data.slice(2,4).readUint16BE() >> 4),
-        opType: ((message.data.readUint16BE(2) & 0xF)),
-        telId: (message.data.readUint8(4) & 0xF0) >>4,
-        telLen: (message.data.readUint8(4) & 0xF),
-        data: message.type > 0x01 ? message.data.slice(0, message.data.length - 1) : message.data,
-        sourceAddrHigh: message.sourceAddrHigh,
-        sourceAddrLow: message.sourceAddrLow
-    }
-    console.log(message)
-    io.emit('message', dataOut)
+most.on("newMessage", (data) => {
+    io.emit('message', data)
 })
 
 socket.on('listening', function () {
@@ -43,6 +23,21 @@ socket.bind('5555');
 
 io.on('connection', (socket) => {
     console.log("connection")
+    socket.on('requestRegistry', () => {
+        console.log("got registry request")
+        most.sendAppMessage({
+            eventType: "sendControlMessage",
+            targetAddressHigh: 0x04,
+            targetAddressLow: 0x00,
+            fBlockID: 0x02,
+            instanceID: 0,
+            fktId: 0xA01,
+            opType: 0x01,
+            data: []
+        })
+    })
 })
+
+io
 
 io.listen(5556);

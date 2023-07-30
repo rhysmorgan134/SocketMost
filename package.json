@@ -2,9 +2,10 @@
   "name": "OS8104A",
   "version": "1.0.0",
   "dependencies": {
-    "dgram": "^1.0.1",
     "onoff": "^6.0.3",
     "socket.io": "^4.7.1",
-    "spi-device": "^3.1.2"
+    "socketmost-client": "^1.0.4",
+    "spi-device": "^3.1.2",
+    "unix-dgram": "^2.0.6"
   }
 }
