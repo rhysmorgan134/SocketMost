@@ -89,6 +89,7 @@ this can be changed by preference, but needs to less than 30 seconds to allow a 
 the PiMost.
 
 <strike>
+  
 ```shell
 dtoverlay=gpio-shutdown,gpio_pin=26,active_low=0,debounce=2000
 ```
