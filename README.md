@@ -88,9 +88,12 @@ To enable auto shutdown we need to add the below line, the debounce value (milli
 this can be changed by preference, but needs to less than 30 seconds to allow a graceful shutdown before power is removed by
 the PiMost.
 
+<strike>
 ```shell
 dtoverlay=gpio-shutdown,gpio_pin=26,active_low=0,debounce=2000
 ```
+</strike>
+This has changed, the status signal is also used within the driver, so creates an access error, it's recommended to implement within the driver by executing a shutdown command
 
 ### Software install
 
