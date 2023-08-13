@@ -36,6 +36,18 @@ io.on('connection', (socket) => {
             data: []
         })
     })
+    socket.on('getSource', (data) => {
+        console.log("got get source request")
+        most.sendAppMessage({
+            eventType: "getSource",
+            connectionLabel: data.connectionLabel
+        })
+    })
+
+    socket.on('sendControlMessage', (data, msg) => {
+        console.log("send control message", data, msg)
+        //most.sendControlMessage(data)
+    })
 })
 
 io

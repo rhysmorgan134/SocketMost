@@ -133,6 +133,11 @@ stream.on('message', async (data, info) => {
             break
         case 'allocate':
             console.log("awaited", os8104.allocate())
+            break
+        case 'getSource':
+            console.log("getting remote source", message)
+            os8104.getRemoteSource(message.connectionLabel)
+            break
     }
 })
 

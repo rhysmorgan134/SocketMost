@@ -25,6 +25,8 @@ class OS8104A extends EventEmitter {
         this.groupAddressNumber.writeUInt8(groupAddress)
         this.awaitAlloc = false
         this.allocResult = false
+        this.awaitGetSource = false
+        this.getSourceResult = false
         this.allocTimeout = null;
         this.startUp()
         this.transceiverLocked = true
@@ -151,6 +153,14 @@ class OS8104A extends EventEmitter {
                 this.writeReg(registers.REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) & ~registers.bMSGC_START_TX])
                 this.awaitAlloc = false
                 clearTimeout(this.allocTimeout)
+            } else if(this.awaitGetSource) {
+                let res = this.readReg(REG_mXCMB, 20)
+                this.getSourceResult = this.parseRemoteGetSource(res)
+                console.log("remote source result", this.getSourceResult, res)
+                this.emit("getSourceResult", this.getSourceResult)
+                this.writeReg(registers.REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) & ~registers.bMSGC_START_TX])
+                this.awaitGetSource = false
+                clearTimeout(this.getSourceTimeout)
             }
         } else if(interrupts & registers.bMSGS_NET_CHANGED) {
             console.log("net changed")
@@ -227,6 +237,24 @@ class OS8104A extends EventEmitter {
         }, 500)
     }
 
+    getRemoteSource(connectionLabel) {
+        let header = Buffer.alloc(7)
+        header.writeUInt8(0x01, 0)
+        header.writeUInt8(0x05, 1)
+        header.writeUInt8(0x03, 2)
+        header.writeUInt8(0xC8, 3)
+        header.writeUInt8(0x00, 4)
+        header.writeUInt8(connectionLabel, 5)
+        header.writeUInt8(0x00, 6)
+        this.writeReg(0xC0, [...header])
+        this.writeReg(REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | bMSGC_START_TX] )
+        this.awaitGetSource = true
+        this.getSourceTimeout = setTimeout(() => {
+            this.awaitGetSource = false
+            console.log("Remote TIMEOUT")
+        }, 500)
+    }
+
     checkForLock() {
         let lockStatus = this.readSingleReg(registers.REG_bCM2)
         let pllLocked = lockStatus & registers.bCM2_UNLOCKED
@@ -274,7 +302,20 @@ class OS8104A extends EventEmitter {
 
         }
         return result
+    }
 
+    parseRemoteGetSource(data) {
+        let nodePos = data.readUint8(10)
+        let group = data.readUint8(12)
+        let logicalHigh = data.readUint8(13)
+        let logicalLow = data.readUint8(14)
+        let result = {
+            nodePos,
+            group,
+            logicalHigh,
+            logicalLow,
+        }
+        return result
     }
 }
 
