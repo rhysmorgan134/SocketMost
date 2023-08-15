@@ -46,7 +46,7 @@ io.on('connection', (socket) => {
 
     socket.on('sendControlMessage', (data, msg) => {
         console.log("send control message", data, msg)
-        //most.sendControlMessage(data)
+        most.sendControlMessage(data)
     })
 })
 

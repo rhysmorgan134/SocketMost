@@ -28,6 +28,9 @@ module.exports.getConfig = function(freq, nodeAddressLow, nodeAddressHigh, group
     //Clock Manager
     config.set(reg.REG_bCM1, reg.bCM1_PLL_ENABLE | lockingSource | crystalDivider)
 
+    freq !== 48 ? config.set(reg.REG_bSDC3, reg.bSDC3_MUTE_SOURCE_PORTS | reg.bSDC3_SOURCE_PORT_DIS) : null
+    freq !== 48 ? config.set(reg.REG_bCM3, reg.bCM3_FREN_DIS | reg.bCM3_AUTO_CRYSTAL_DIS | reg.bCM3_DIS_AUTO_SWITCH_CLOCK | reg.bCM3_FREQ_REG_RESET) : null
+
     //Transmitter control
     config.set(reg.REG_bXCR, reg.bXCR_SLAVE | reg.bXCR_OUTPUT_ENABLE | bypass | reg.bXCR_ALL_BYPASS_DIS | reg.bXCR_REN_DIS)
 

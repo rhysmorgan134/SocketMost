@@ -111,7 +111,7 @@ os8104.on('unlocked', () => {
 
 stream.on('message', async (data, info) => {
     let message = JSON.parse(data.toString())
-    //console.log('message received', message)
+    console.log('message received', message)
     switch (message.eventType) {
         case 'sendControlMessage':
             //console.log("sending", message)
