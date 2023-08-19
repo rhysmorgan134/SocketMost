@@ -1,14 +1,14 @@
 const reg = require('./registers')
 
-module.exports.getConfig = function(freq, nodeAddressLow, nodeAddressHigh, groupAddress) {
+module.exports.getConfig = function(freq, nodeAddressLow, nodeAddressHigh, groupAddress, mode) {
     console.log(nodeAddressLow, nodeAddressHigh, groupAddress)
     const config = new Map()
 
     //Testing for 44.1khz, this is untested and just configured as per datasheet, if running at 44.1khz then the crystal is not compatible, so the chip has to be started up in legacy mode
     //and the locking source needs to be set to the RX network.
-    let lockingSource = freq===48 ? reg.bCM1_PLL_INPUT_CRYSTAL : reg.bCM1_PLL_INPUT_MOST
-    let crystalDivider = freq===48 ? reg.bCM1_CRYSTAL_DIVIDER_384F : reg.bCM1_CRYSTAL_DIVIDER_256F
-    let bypass = freq===48 ? reg.bXCR_ENHANCED_BYPASS : reg.bXCR_LEGACY_BYPASS
+    let lockingSource = mode ? reg.bCM1_PLL_INPUT_CRYSTAL : reg.bCM1_PLL_INPUT_MOST
+    let crystalDivider = mode ? reg.bCM1_CRYSTAL_DIVIDER_384F : reg.bCM1_CRYSTAL_DIVIDER_256F
+    let bypass = mode ? reg.bXCR_ENHANCED_BYPASS : reg.bXCR_LEGACY_BYPASS
 
     //SCK as output
     //config.set(reg.REG_bSDC1, reg.bSDC1_SCK_OUTPUT)
@@ -28,8 +28,8 @@ module.exports.getConfig = function(freq, nodeAddressLow, nodeAddressHigh, group
     //Clock Manager
     config.set(reg.REG_bCM1, reg.bCM1_PLL_ENABLE | lockingSource | crystalDivider)
 
-    freq !== 48 ? config.set(reg.REG_bSDC3, reg.bSDC3_MUTE_SOURCE_PORTS | reg.bSDC3_SOURCE_PORT_DIS) : null
-    freq !== 48 ? config.set(reg.REG_bCM3, reg.bCM3_FREN_DIS | reg.bCM3_AUTO_CRYSTAL_DIS | reg.bCM3_DIS_AUTO_SWITCH_CLOCK | reg.bCM3_FREQ_REG_RESET) : null
+    mode === 0 ? config.set(reg.REG_bSDC3, reg.bSDC3_MUTE_SOURCE_PORTS | reg.bSDC3_SOURCE_PORT_DIS) : null
+    mode === 0 ? config.set(reg.REG_bCM3, reg.bCM3_FREN_DIS | reg.bCM3_AUTO_CRYSTAL_DIS | reg.bCM3_DIS_AUTO_SWITCH_CLOCK | reg.bCM3_FREQ_REG_RESET) : null
 
     //Transmitter control
     config.set(reg.REG_bXCR, reg.bXCR_SLAVE | reg.bXCR_OUTPUT_ENABLE | bypass | reg.bXCR_ALL_BYPASS_DIS | reg.bXCR_REN_DIS)

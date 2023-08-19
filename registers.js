@@ -206,6 +206,8 @@ module.exports = {
     bCM3_FREN_EN: 0x10,
     bCM3_FREN_DIS: 0x00,
 
+    bCM3_ENH: 0x40,
+
     bCM3_AUTO_SWITCH_CLOCK: 0x08,
     bCM3_DIS_AUTO_SWITCH_CLOCK: 0x00,
 

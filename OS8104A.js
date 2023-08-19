@@ -14,9 +14,9 @@ class OS8104A extends EventEmitter {
         super()
         this.spi = new spi.openSync(0, 0, {chipSelectHigh: false, bitsPerWord: 8, lsbFirst: false})
         this.interrupt = new Gpio(5, 'in', 'falling')
-        this.fault = new Gpio(6, 'in', 'both');
+        this.fault = new Gpio(6, 'in', 'both', {debounceTimer: 50});
         this.status = new Gpio(16, 'in', 'both', {debounceTimer: 50 });
-        this.mostStatus = new Gpio(26, 'in', 'both')
+        this.mostStatus = new Gpio(26, 'in', 'both', {debounceTimer: 10})
         this.reset = new Gpio(17, 'out')
         this.freq = freq
         this.nodeAddressNumber = Buffer.alloc(2)
@@ -36,6 +36,13 @@ class OS8104A extends EventEmitter {
                 throw err
             }
             console.log("fault", val)
+        })
+
+        this.status.watch((err, val) => {
+            if(err) {
+                throw err
+            }
+            console.log("status", val)
         })
 
         this.mostStatus.watch((err, val) => {
@@ -63,13 +70,14 @@ class OS8104A extends EventEmitter {
 
     resetOs8104() {
         this.interrupt.unwatchAll()
+        this.getMode()
         this.runConfig()
     }
 
 
     runConfig() {
         console.log("running config")
-        for(const entry of config.getConfig(this.freq, this.nodeAddressNumber[1], this.nodeAddressNumber[0], this.groupAddressNumber)) {
+        for(const entry of config.getConfig(this.freq, this.nodeAddressNumber[1], this.nodeAddressNumber[0], this.groupAddressNumber, this.getMode())) {
             console.log("0", entry[0])
             console.log("1", entry[1])
             this.writeReg(entry[0], [entry[1]])
@@ -316,6 +324,11 @@ class OS8104A extends EventEmitter {
             logicalLow,
         }
         return result
+    }
+
+    getMode() {
+        let mode = this.readSingleReg(registers.REG_bCM3) & registers.bCM3_ENH
+        console.log('mode', mode)
     }
 }
 
