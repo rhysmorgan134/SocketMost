@@ -27,10 +27,12 @@ class OS8104A extends EventEmitter {
         this.allocResult = false
         this.awaitGetSource = false
         this.getSourceResult = false
-        this.allocTimeout = null;
+        this.allocTimeout = null
+        this.streamAllocTimeout = null
+        this.allocCheck = null
+        this.delayTimer = null
         this.startUp()
         this.transceiverLocked = true
-        this.netState = this.mostStatus.readSync()
         this.fault.watch((err, val) => {
             if(err) {
                 throw err
@@ -59,6 +61,8 @@ class OS8104A extends EventEmitter {
     }
 
     startUp() {
+        console.log("resetting")
+        this.interrupt.unwatchAll()
         this.reset.writeSync(0)
         this.wait(200).then(() => {
             this.reset.writeSync(1)
@@ -70,14 +74,14 @@ class OS8104A extends EventEmitter {
 
     resetOs8104() {
         this.interrupt.unwatchAll()
-        this.getMode()
+        //this.getMode()
         this.runConfig()
     }
 
 
     runConfig() {
         console.log("running config")
-        for(const entry of config.getConfig(this.freq, this.nodeAddressNumber[1], this.nodeAddressNumber[0], this.groupAddressNumber, this.getMode())) {
+        for(const entry of config.getConfig(this.freq, this.nodeAddressNumber[1], this.nodeAddressNumber[0], this.groupAddressNumber, 0)) {
             console.log("0", entry[0])
             console.log("1", entry[1])
             this.writeReg(entry[0], [entry[1]])
@@ -148,6 +152,7 @@ class OS8104A extends EventEmitter {
             this.emit("newMessage", this.readReg(0xA0, 20))
             this.writeReg(registers.REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | registers.bMSGC_RESET_MESSAGE_RX_INT | registers.bMSGC_RECEIVE_BUFF_EN])
         } else if(interrupts & registers.bMSGS_ERR) {
+            console.log("error active")
             if(this.transceiverLocked) {
                 this.parseFault(this.readSingleReg(REG_bXSR))
             }
@@ -160,6 +165,9 @@ class OS8104A extends EventEmitter {
                 this.emit("allocResult", this.allocResult)
                 this.writeReg(registers.REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) & ~registers.bMSGC_START_TX])
                 this.awaitAlloc = false
+                if(this.allocResult.answer1 === "ALLOC_GRANT") {
+
+                }
                 clearTimeout(this.allocTimeout)
             } else if(this.awaitGetSource) {
                 let res = this.readReg(REG_mXCMB, 20)
@@ -190,6 +198,7 @@ class OS8104A extends EventEmitter {
                 }, 100)
             }
         } else {
+            console.log("resetting in parse")
             this.writeReg(registers.REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | registers.bMSGC_RESET_ERR_INT])
         }
 
@@ -197,7 +206,7 @@ class OS8104A extends EventEmitter {
 
 
     sendControlMessage ({targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data}) {
-        //console.log(targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data)
+        console.log(targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data)
         if(this.transceiverLocked) {
             let header = Buffer.alloc(9)
             header.writeUInt8(0x01, 0)
@@ -211,6 +220,7 @@ class OS8104A extends EventEmitter {
             let buf = Buffer.alloc(21)
             let tempData = Buffer.concat([header, Buffer.from(data)])
             tempData.copy(buf, 0, 0, tempData.length)
+            console.log("sending", buf)
             this.writeReg(0xC0, [...buf])
             this.writeReg(REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | bMSGC_START_TX] )
         } else {
@@ -269,6 +279,7 @@ class OS8104A extends EventEmitter {
         let lockSource = this.readSingleReg(registers.REG_bXSR) & registers.bXSR_FREQ_REG_ACT
         if(!pllLocked && !lockSource) {
             this.emit("locked")
+            console.log("resetting in check")
             this.writeReg(registers.REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | registers.bMSGC_RESET_ERR_INT])
             this.transceiverLocked = true
             clearInterval(this.lockInterval)
@@ -312,6 +323,27 @@ class OS8104A extends EventEmitter {
         return result
     }
 
+    stream({sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr}) {
+        this.allocResult = false
+        this.allocate()
+        this.waitForAlloc(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr)
+    }
+
+    waitForAlloc(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr) {
+        this.allocCheck = setInterval(() => {
+            if(this.allocResult) {
+                console.log("alloc done, setting MRT")
+                clearTimeout(this.streamAllocTimeout)
+                clearInterval(this.allocCheck)
+                this.setMrtSource1(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr)
+            }
+        }, 20)
+        this.streamAllocTimeout = setTimeout(() => {
+            clearInterval(this.allocCheck)
+            console.log("stream audio timed out on alloc check")
+        }, 1000)
+    }
+
     parseRemoteGetSource(data) {
         let nodePos = data.readUint8(10)
         let group = data.readUint8(12)
@@ -324,6 +356,38 @@ class OS8104A extends EventEmitter {
             logicalLow,
         }
         return result
+    }
+
+    // Set the MOST routing table, alloc result has to be present, it will the write the source1 data to
+    // that routing table, effectively streaming on the network
+    setMrtSource1(targetAddressHigh, targetAddressLow, fBlockID, instanceID, sinkNr) {
+        console.log("setting mrt")
+        if(this.allocResult?.loc1) {
+            console.log("mrt running", this.allocResult)
+            this.writeReg(this.allocResult.loc1, [0x49])
+            this.writeReg(this.allocResult.loc2, [0x59])
+            this.writeReg(this.allocResult.loc3, [0x69])
+            this.writeReg(this.allocResult.loc4, [0x79])
+            this.sendControlMessage({targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId: 0x112, opType: 0x02, data: [sinkNr]})
+            setTimeout(() => {
+                console.log("connecting target to sink")
+                this.connectSink(targetAddressHigh, targetAddressLow, fBlockID, instanceID, sinkNr)
+                this.writeReg(registers.REG_bSDC3, [0x00])
+                this.writeReg(registers.REG_bSDC1, [this.readSingleReg(registers.REG_bSDC1) | registers.bSDC1_UNMUTE_SOURCE])
+                console.log(this.readSingleReg(registers.REG_bSDC1))
+                console.log(this.readSingleReg(registers.REG_bSDC2))
+                console.log(this.readSingleReg(registers.REG_bSDC3))
+                // await this.sourceDataControl3.setMultiple({mute: false, sourceEnable: false})
+                // await this.sourceDataControl1.setMultiple({mute: true})
+            }, 100)
+        }
+    }
+
+    connectSink(targetAddressHigh, targetAddressLow, fBlockID, instanceID, sinkNr) {
+        // TODO make srcDelay dynamic, unsure of impact
+        let data = [sinkNr, 3, this.allocResult.loc1, this.allocResult.loc2, this.allocResult.loc3, this.allocResult.loc4] // data format is [sinkNumber, srcDelay, channelList]
+
+        this.sendControlMessage({targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId: 0x111, opType: 0x02, data})
     }
 
     getMode() {

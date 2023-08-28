@@ -138,6 +138,9 @@ stream.on('message', async (data, info) => {
             console.log("getting remote source", message)
             os8104.getRemoteSource(message.connectionLabel)
             break
+        case 'stream':
+            console.log("stream request")
+            os8104.stream(message)
     }
 })
 

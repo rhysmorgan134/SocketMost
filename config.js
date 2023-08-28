@@ -36,13 +36,13 @@ module.exports.getConfig = function(freq, nodeAddressLow, nodeAddressHigh, group
 
 
     //Source Data control
-    config.set(reg.REG_bSDC1, reg.bSDC1_ACTIVE_EDGE_EN | reg.bSDC1_DELAY_FIRST_BIT_EN | reg.bSDC1_SCK_INPUT | reg.bSDC1_TRANSPARENT_DIS | reg.bSDC1_UNMUTE_SOURCE)
+    config.set(reg.REG_bSDC1, reg.bSDC1_ACTIVE_EDGE_EN | reg.bSDC1_DELAY_FIRST_BIT_EN |  reg.bSDC1_POLARITY_FSY_FALLING | reg.bSDC1_NO_CYCLES_DEF | reg.bSDC1_SCK_OUTPUT | reg.bSDC1_TRANSPARENT_DIS | reg.bSDC1_UNMUTE_SOURCE | reg.bSDC1_SPDIF_DIS)
 
     //set sck rate
     config.set(reg.REG_bSDC2, reg.bSDC2_SCK_32F)
 
     //Transceiver Status
-    config.set(reg.REG_bXSR, reg.bXSR_CODING_ERR_MASK | reg.bXSR_SPDIF_ERR_MASK )
+    config.set(reg.REG_bXSR, reg.bXSR_CODING_ERR_MASK | reg.bXSR_SPDIF_ERR_MASK | reg.bXSR_LOCK_ERR_MASK)
 
     //Interrupt Enable
     config.set(reg.REG_bIE, reg.bIE_RX_INT_EN | reg.bIE_ERR_INT_EN | reg.bIE_TX_INT_EN)

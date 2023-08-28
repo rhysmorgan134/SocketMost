@@ -4,7 +4,7 @@
   "dependencies": {
     "onoff": "^6.0.3",
     "socket.io": "^4.7.1",
-    "socketmost-client": "^1.0.4",
+    "socketmost-client": "^1.0.5",
     "spi-device": "^3.1.2",
     "unix-dgram": "^2.0.6"
   }
