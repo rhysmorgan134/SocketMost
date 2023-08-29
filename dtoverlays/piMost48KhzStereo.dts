@@ -9,7 +9,7 @@
         target = <&sound>;
         __overlay__ {
             compatible = "simple-audio-card";
-            simple-audio-card,name = "GenericStereoAudioCodec";
+            simple-audio-card,name = "PiMost";
             status="okay";
 
             capture_link: simple-audio-card,dai-link@0 {
