@@ -8,6 +8,11 @@ most.on("newMessage", (data) => {
     io.emit('message', data)
 })
 
+most.on('allocResult', (data) => {
+    console.log('alloc res', data)
+    io.emit('allocResult', data)
+})
+
 socket.on('listening', function () {
     const address = socket.address();
     console.log('UDP socket listening on ' + address.address + ":" + address.port);
@@ -35,6 +40,27 @@ io.on('connection', (socket) => {
             opType: 0x01,
             data: []
         })
+    })
+    socket.on('getSource', (data) => {
+        console.log("got get source request")
+        most.sendAppMessage({
+            eventType: "getSource",
+            connectionLabel: data.connectionLabel
+        })
+    })
+
+    socket.on('sendControlMessage', (data, msg) => {
+        console.log("send control message", data, msg)
+        most.sendControlMessage(data)
+    })
+
+    socket.on('allocate', (data, msg) => {
+        most.allocate()
+    })
+
+    socket.on('stream', (data, msg) => {
+        console.log("stream request", data)
+        most.stream(data)
     })
 })
 

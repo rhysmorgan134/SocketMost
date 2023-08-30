@@ -13,7 +13,7 @@ module.exports = {
     REG_bNAH: 0x8A,
     REG_bNAL: 0x8B,
     REG_bSDC2: 0x8C,
-    REG_SDC3: 0x8D,
+    REG_bSDC3: 0x8D,
     REG_bCM2: 0x8E,
     REG_bNDR: 0x8F,
     REG_bMPR: 0x90,
@@ -119,7 +119,6 @@ module.exports = {
     bSDC1_TRANSPARENT_EN: 0x00,
     bSDC1_TRANSPARENT_DIS: 0x01,
 
-
     //Register bCM1 Clock Manager 1 0x83
     bCM1_PLL_DISABLE: 0x80,
     bCM1_PLL_ENABLE: 0x00,
@@ -193,6 +192,28 @@ module.exports = {
 
     //Clock Manager 2
     bCM2_UNLOCKED: 0x80,
-    BCM2_NETWORK_ACTIVITY: 0x40
+    BCM2_NETWORK_ACTIVITY: 0x40,
+
+    /////Legacy testing/////
+    //bSDC3
+    bSDC3_MUTE_SOURCE_PORTS: 0x02,
+    bSDC3_UNMUTE_SOURCE_PORTS: 0x00,
+
+    bSDC3_SOURCE_PORT_EN: 0x00,
+    bSDC3_SOURCE_PORT_DIS: 0x01,
+
+    //bCM3
+    bCM3_FREN_EN: 0x10,
+    bCM3_FREN_DIS: 0x00,
+
+    bCM3_ENH: 0x40,
+
+    bCM3_AUTO_SWITCH_CLOCK: 0x08,
+    bCM3_DIS_AUTO_SWITCH_CLOCK: 0x00,
+
+    bCM3_AUTO_CRYSTAL_EN: 0x04,
+    bCM3_AUTO_CRYSTAL_DIS: 0x00,
+
+    bCM3_FREQ_REG_RESET: 0x02
 
 }

@@ -111,7 +111,7 @@ os8104.on('unlocked', () => {
 
 stream.on('message', async (data, info) => {
     let message = JSON.parse(data.toString())
-    //console.log('message received', message)
+    console.log('message received', message)
     switch (message.eventType) {
         case 'sendControlMessage':
             //console.log("sending", message)
@@ -133,6 +133,14 @@ stream.on('message', async (data, info) => {
             break
         case 'allocate':
             console.log("awaited", os8104.allocate())
+            break
+        case 'getSource':
+            console.log("getting remote source", message)
+            os8104.getRemoteSource(message.connectionLabel)
+            break
+        case 'stream':
+            console.log("stream request")
+            os8104.stream(message)
     }
 })
 
