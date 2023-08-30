@@ -31,6 +31,8 @@ class OS8104A extends EventEmitter {
         this.streamAllocTimeout = null
         this.allocCheck = null
         this.delayTimer = null
+        this.multiPartMessage = null
+        this.multiPartSequenc = 0
         this.startUp()
         this.transceiverLocked = true
         this.fault.watch((err, val) => {
@@ -56,6 +58,8 @@ class OS8104A extends EventEmitter {
                 this.writeReg(registers.REG_bXCR, [this.readSingleReg(registers.REG_bXCR) | registers.bXCR_OUTPUT_ENABLE])
             }
         })
+
+
 
         this.lockInterval = null;
     }
@@ -157,7 +161,6 @@ class OS8104A extends EventEmitter {
                 this.parseFault(this.readSingleReg(REG_bXSR))
             }
         } else if(interrupts & registers.bMSGS_MESS_TRANSMITTED) {
-            this.emit('messageSent')
             this.writeReg(registers.REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | registers.bMSGC_RESET_MESSAGE_TX_INT])
             if(this.awaitAlloc) {
                 let res = this.readReg(REG_mXCMB, 20)
@@ -178,6 +181,7 @@ class OS8104A extends EventEmitter {
                 this.awaitGetSource = false
                 clearTimeout(this.getSourceTimeout)
             }
+            this.emit('messageSent')
         } else if(interrupts & registers.bMSGS_NET_CHANGED) {
             console.log("net changed")
             this.writeReg(registers.REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | registers.bMSGC_RESET_NET_CONF_CHANGE])
@@ -205,28 +209,63 @@ class OS8104A extends EventEmitter {
     }
 
 
-    sendControlMessage ({targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data}) {
+    sendControlMessage ({targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data}, telId=0) {
         console.log(targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data)
-        if(this.transceiverLocked) {
-            let header = Buffer.alloc(9)
-            header.writeUInt8(0x01, 0)
-            header.writeUInt8(0x00, 1)
-            header.writeUInt8(targetAddressHigh, 2)
-            header.writeUInt8(targetAddressLow, 3)
-            header.writeUInt8(fBlockID, 4)
-            header.writeUInt8(instanceID, 5)
-            header.writeUInt16BE((fktId << 4) | opType, 6)
-            header.writeUInt8(0x00 | data.length, 8)
-            let buf = Buffer.alloc(21)
-            let tempData = Buffer.concat([header, Buffer.from(data)])
-            tempData.copy(buf, 0, 0, tempData.length)
-            console.log("sending", buf)
-            this.writeReg(0xC0, [...buf])
-            this.writeReg(REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | bMSGC_START_TX] )
+        if(data.length > 12) {
+            this.multiPartMessage = {targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data: [...data]}
+            this.multiPartSequenc = 0
+            this.sendMultiPartMessage()
         } else {
-            console.log("CAN'T SEND NO LOCK")
+            if(this.transceiverLocked) {
+                let header = Buffer.alloc(9)
+                header.writeUInt8(0x01, 0)
+                header.writeUInt8(0x00, 1)
+                header.writeUInt8(targetAddressHigh, 2)
+                header.writeUInt8(targetAddressLow, 3)
+                header.writeUInt8(fBlockID, 4)
+                header.writeUInt8(instanceID, 5)
+                header.writeUInt16BE((fktId << 4) | opType, 6)
+                header.writeUInt8(telId | data.length, 8)
+                let buf = Buffer.alloc(21)
+                let tempData = Buffer.concat([header, Buffer.from(data)])
+                tempData.copy(buf, 0, 0, tempData.length)
+                console.log("sending", buf)
+                this.writeReg(0xC0, [...buf])
+                this.writeReg(REG_bMSGC, [this.readSingleReg(registers.REG_bMSGC) | bMSGC_START_TX] )
+            } else {
+                console.log("CAN'T SEND NO LOCK")
+            }
         }
+    }
 
+    sendMultiPartMessage() {
+        let tempMessage = {...this.multiPartMessage}
+        console.log(this.multiPartMessage)
+        console.log("splicing", this.multiPartMessage.data)
+        this.multiPartMessage.data.length > 11 ? tempMessage.data = this.multiPartMessage.data.splice(0, 11) : tempMessage.data = this.multiPartMessage.data
+        console.log("spliced", this.multiPartMessage.data)
+        tempMessage.data = [this.multiPartSequenc, ...tempMessage.data]
+        let telId
+        // In a multipart message telId represents the beginning, middle and end of the message, telId = 1 means first message, telId = 2 means message continueing
+        // telId = 3 means final message
+        if(this.multiPartSequenc === 0) {
+            telId = 1
+        } else if(this.multiPartMessage.data.length < 11) {
+            telId = 3
+        } else {
+            telId = 2
+        }
+        console.log("tel id", telId)
+        this.sendControlMessage(tempMessage, telId)
+        if(telId !== 3) {
+            this.once('messageSent', () => {
+                this.multiPartSequenc += 1
+                console.log('moving to next sequence', this.multiPartSequenc)
+                this.sendMultiPartMessage()
+            })
+        } else {
+            console.log("Sequence finished")
+        }
     }
 
     getNodePosition() {
