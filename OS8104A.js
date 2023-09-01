@@ -370,7 +370,12 @@ class OS8104A extends EventEmitter {
 
     retrieveAudio(bytes) {
         console.log("retrieve audio in os8104", bytes)
-        this.setMrtSink1([bytes['0'], bytes['1'], bytes['2'], bytes['3']])
+        let bytesT = []
+        bytesT.push(bytes['0'])
+        bytesT.push(bytes['1'])
+        bytes['2'] ? bytesT.push(bytes['2']) : null
+        bytes['3'] ? bytesT.push(bytes['3']) : null
+        this.setMrtSink1(bytesT)
     }
 
     waitForAlloc(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr) {
@@ -429,10 +434,18 @@ class OS8104A extends EventEmitter {
 
     setMrtSink1(bytes) {
         console.log("setting mrt", bytes)
-        this.writeReg(0x46, [bytes[0]])
-        this.writeReg(0x56, [bytes[1]])
-        this.writeReg(0x66, [bytes[2]])
-        this.writeReg(0x76, [bytes[3]])
+        if(bytes.length > 2) {
+            this.writeReg(0x46, [bytes[0]])
+            this.writeReg(0x56, [bytes[1]])
+            this.writeReg(0x66, [bytes[2]])
+            this.writeReg(0x76, [bytes[3]])
+        } else {
+            this.writeReg(0x46, [bytes[0]])
+            this.writeReg(0x56, [bytes[1]])
+            this.writeReg(0x66, [bytes[0]])
+            this.writeReg(0x76, [bytes[1]])
+        }
+        // TODO duplicated from mrtSource, needs to move both to a separate function, not needed either if already unmuted
         setTimeout(() => {
             this.writeReg(registers.REG_bSDC3, [0x00])
             this.writeReg(registers.REG_bSDC1, [this.readSingleReg(registers.REG_bSDC1) | registers.bSDC1_UNMUTE_SOURCE])
