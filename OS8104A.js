@@ -429,7 +429,6 @@ class OS8104A extends EventEmitter {
 
     setMrtSink1(bytes) {
         console.log("setting mrt", bytes)
-        console.log("mrt running", this.allocResult)
         this.writeReg(0x46, [bytes[0]])
         this.writeReg(0x56, [bytes[1]])
         this.writeReg(0x66, [bytes[2]])
