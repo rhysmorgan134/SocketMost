@@ -62,6 +62,11 @@ io.on('connection', (socket) => {
         console.log("stream request", data)
         most.stream(data)
     })
+
+    socket.on('retrieveAudio', (data, msg) => {
+        console.log("explorer sent retrieve audio")
+        most.retrieveAudio(data)
+    })
 })
 
 io
