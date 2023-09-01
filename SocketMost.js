@@ -141,6 +141,10 @@ stream.on('message', async (data, info) => {
         case 'stream':
             console.log("stream request")
             os8104.stream(message)
+            break
+        case 'retrieveAudio':
+            console.log("audio request", message)
+            os8104.retrieveAudio(message)
     }
 })
 

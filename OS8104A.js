@@ -368,6 +368,11 @@ class OS8104A extends EventEmitter {
         this.waitForAlloc(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr)
     }
 
+    retrieveAudio(bytes) {
+        console.log("retrieve audio in os8104", bytes)
+        this.setMrtSink1([bytes['0'], bytes['1'], bytes['2'], bytes['3']])
+    }
+
     waitForAlloc(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr) {
         this.allocCheck = setInterval(() => {
             if(this.allocResult) {
@@ -421,6 +426,25 @@ class OS8104A extends EventEmitter {
             }, 100)
         }
     }
+
+    setMrtSink1(bytes) {
+        console.log("setting mrt", bytes)
+        console.log("mrt running", this.allocResult)
+        this.writeReg(0x46, [bytes[0]])
+        this.writeReg(0x56, [bytes[1]])
+        this.writeReg(0x66, [bytes[2]])
+        this.writeReg(0x76, [bytes[3]])
+        setTimeout(() => {
+            this.writeReg(registers.REG_bSDC3, [0x00])
+            this.writeReg(registers.REG_bSDC1, [this.readSingleReg(registers.REG_bSDC1) | registers.bSDC1_UNMUTE_SOURCE])
+            console.log(this.readSingleReg(registers.REG_bSDC1))
+            console.log(this.readSingleReg(registers.REG_bSDC2))
+            console.log(this.readSingleReg(registers.REG_bSDC3))
+            // await this.sourceDataControl3.setMultiple({mute: false, sourceEnable: false})
+            // await this.sourceDataControl1.setMultiple({mute: true})
+        }, 100)
+    }
+
 
     connectSink(targetAddressHigh, targetAddressLow, fBlockID, instanceID, sinkNr) {
         // TODO make srcDelay dynamic, unsure of impact
