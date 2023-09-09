@@ -1,21 +1,35 @@
 const fs = require('fs')
 const net = require('net');
-var unix = require('unix-dgram');
-const configPath = './config.json'
+const unix = require('unix-dgram');
 const Os8104 = require('./OS8104A')
 
-const defaultConfig = {
+const configPath: string = './config.json'
+
+type config = {
+    version: string,
+    nodeAddress: number,
+    groupAddress: number,
+    freq: number
+}
+
+type masterRef = {
+    instanceId: number,
+    sourceAddrHigh: number,
+    sourceAddrLow: number
+}
+
+const defaultConfig: config = {
     version: '1.0.0',
     nodeAddress: 272,
     groupAddress: 34,
     freq: 48
 }
 
-let connected = false
-let connectInterval = null
+let connected: boolean = false
+let connectInterval: ReturnType<typeof setInterval> = null
 
-let config = defaultConfig
-let master = null
+let config: config = defaultConfig
+let master: masterRef = null
 let locked = false
 if (fs.existsSync(configPath)) {
     console.log('file exists')
