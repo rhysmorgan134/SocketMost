@@ -3,49 +3,17 @@ import spi, { type SpiDevice, type SpiOptions } from "spi-device"
 import EventEmitter from "events"
 import { getRegisterConfig } from "./RegisterConfig"
 import { Registers } from "./Registers.js"
+import {
+    MostMessage,
+    Stream,
+    AllocResult,
+    SourceResult,
+    SocketMostSendMessage,
+    RawMostRxMessage,
+    Os8104Events
+} from "./Messages";
+
 const TRANSFER_SPEED = 180000
-
-export interface MostMessage {
-    targetAddressHigh: number
-    targetAddressLow: number
-    fBlockID: number
-    instanceID: number
-    fktId: number
-    opType: number
-    data: number[]
-}
-
-export interface Config {
-    freq: number
-    nodeAddressLow: number
-    nodeAddressHigh: number
-    groupAddress: number
-}
-
-export interface Stream {
-    sourceAddrHigh: number
-    sourceAddrLow: number
-    fBlockID: number
-    instanceID: number
-    sinkNr: number
-}
-
-export interface AllocResult {
-    loc1: number
-    loc2: number
-    loc3: number
-    loc4: number
-    cl: number
-    answer1: string
-    freeChannels: number
-}
-
-export interface SourceResult {
-    nodePos: number
-    group: number
-    logicalHigh: number
-    logicalLow: number
-}
 
 const options: SpiOptions = {
     chipSelectHigh: false,
@@ -65,16 +33,16 @@ export class OS8104A extends EventEmitter {
     nodeAddressBuf: Buffer
     groupAddressBuf: Buffer
     awaitAlloc: boolean
-    allocResult: AllocResult
+    allocResult?: AllocResult
     awaitGetSource: boolean
     getSourceResult: SourceResult | null
-    allocTimeout: ReturnType<typeof setTimeout> | null
-    streamAllocTimeout: ReturnType<typeof setTimeout> | null
-    delayTimer: ReturnType<typeof setTimeout> | null
-    getSourceTimeout: ReturnType<typeof setTimeout> | null
-    allocCheck: ReturnType<typeof setInterval> | null
-    lockInterval: ReturnType<typeof setInterval> | null
-    multiPartMessage: MostMessage
+    allocTimeout?: NodeJS.Timeout
+    streamAllocTimeout?: NodeJS.Timeout
+    delayTimer?: NodeJS.Timeout
+    getSourceTimeout?: NodeJS.Timeout
+    allocCheck?: NodeJS.Timer
+    lockInterval?: NodeJS.Timer
+    multiPartMessage?: MostMessage
     multiPartSequence: number
     transceiverLocked: boolean
 
@@ -95,55 +63,29 @@ export class OS8104A extends EventEmitter {
         this.groupAddressBuf = Buffer.alloc(1)
         this.groupAddressBuf.writeUInt8(groupAddress)
         this.awaitAlloc = false
-        // REVIEW - is this a better method than just allowing the type to be a type or null?
-        this.allocResult = {
-            loc1: -1,
-            loc2: -1,
-            loc3: -1,
-            loc4: -1,
-            cl: -1,
-            answer1: "",
-            freeChannels: -1
-        }
         this.awaitGetSource = false
         this.getSourceResult = null
-        this.allocTimeout = null
-        this.streamAllocTimeout = null
-        this.getSourceTimeout = null
-        this.allocCheck = null
-        this.lockInterval = null
-        this.delayTimer = null
-        // REVIEW - is this a better method than just allowing the type to be a type or null?
-        this.multiPartMessage = {
-            targetAddressHigh: 0,
-            targetAddressLow: 0,
-            fBlockID: 0,
-            instanceID: 0,
-            fktId: 0,
-            opType: 0,
-            data: []
-        }
         this.multiPartSequence = 0
         this.transceiverLocked = true
         this.startUp()
         this.getRegisterConfig = getRegisterConfig
 
         this.fault.watch((err, val) => {
-            if (err !== null && err !== undefined) {
+            if (err) {
                 throw err
             }
             console.log("fault", val)
         })
 
         this.status.watch((err, val) => {
-            if (err !== null && err !== undefined) {
+            if (err) {
                 throw err
             }
             console.log("status", val)
         })
 
         this.mostStatus.watch((err, val) => {
-            if (err !== null && err !== undefined) {
+            if (err) {
                 throw err
             }
             if (val === 1) {
@@ -201,8 +143,8 @@ export class OS8104A extends EventEmitter {
         })
     }
 
-    async wait(ms: number): Promise<null> {
-        return await new Promise((resolve) => setTimeout(resolve, ms))
+    async wait(ms: number): Promise<void> {
+        await new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     writeReg(address: number, value: number[] = []): number | null {
@@ -268,7 +210,7 @@ export class OS8104A extends EventEmitter {
         // Read interrupts
         const interrupts = this.readSingleReg(Registers.REG_bMSGS)
         if ((interrupts & Registers.bMSGS_MESS_RECEIVED) > 0) {
-            this.emit("newMessage", this.readReg(0xa0, 20))
+            this.parseMostMessage(this.readReg(0xa0, 20))
             this.writeReg(Registers.REG_bMSGC, [
                 this.readSingleReg(Registers.REG_bMSGC) |
                     Registers.bMSGC_RESET_MESSAGE_RX_INT |
@@ -286,28 +228,25 @@ export class OS8104A extends EventEmitter {
             if (this.awaitAlloc) {
                 const res = this.readReg(Registers.REG_mXCMB, 20)
                 this.allocResult = this.parseAllocateResponse(res)
-                this.emit("allocResult", this.allocResult)
+                this.emit(Os8104Events.AllocResult, this.allocResult)
                 this.writeReg(Registers.REG_bMSGC, [
                     this.readSingleReg(Registers.REG_bMSGC) & ~Registers.bMSGC_START_TX
                 ])
                 this.awaitAlloc = false
-                if (this.allocTimeout !== null) {
-                    clearTimeout(this.allocTimeout)
-                }
+                clearTimeout(this.allocTimeout)
             } else if (this.awaitGetSource) {
                 const res = this.readReg(Registers.REG_mXCMB, 20)
                 this.getSourceResult = this.parseRemoteGetSource(res)
                 console.log("remote source result", this.getSourceResult, res)
-                this.emit("getSourceResult", this.getSourceResult)
+                this.emit(Os8104Events.GetSourceResult, this.getSourceResult)
                 this.writeReg(Registers.REG_bMSGC, [
                     this.readSingleReg(Registers.REG_bMSGC) & ~Registers.bMSGC_START_TX
                 ])
                 this.awaitGetSource = false
-                if (this.getSourceTimeout !== null) {
-                    clearTimeout(this.getSourceTimeout)
-                }
+                clearTimeout(this.getSourceTimeout)
+
             }
-            this.emit("messageSent")
+            this.emit(Os8104Events.MessageSent)
         } else if ((interrupts & Registers.bMSGS_NET_CHANGED) > 0) {
             console.log("net changed")
             this.writeReg(Registers.REG_bMSGC, [
@@ -318,13 +257,29 @@ export class OS8104A extends EventEmitter {
         }
     }
 
+    parseMostMessage(message: Buffer) {
+        const data: RawMostRxMessage = {
+            type: message.readUint8(0),
+            sourceAddressHigh: message.readUint8(1),
+            sourceAddressLow: message.readUint8(2),
+            fBlockID: message.readUint8(3),
+            instanceID: message.readUint8(4),
+            fktID: (message.slice(5,7).readUint16BE() >> 4),
+            opType: ((message.readUint16BE(5) & 0xF)),
+            telID: (message.readUint8(7) & 0xF0) >>4,
+            telLen: (message.readUint8(7) & 0xF),
+            data: message.readUint8(0) > 0x01 ? message.slice(8, message.length - 1) : message.slice(8)
+            }
+        this.emit(Os8104Events.MostMessageRx, data)
+    }
+
     parseFault(data: number): void {
         console.log("Error", this.fault.readSync(), data)
         const masks = this.readSingleReg(Registers.REG_bXSR)
         if ((data & Registers.bXSR_TRANS_LOCK_ACT) > 0) {
             if ((masks & Registers.bXSR_LOCK_ERR_MASK) === 0 && this.transceiverLocked) {
                 this.transceiverLocked = false
-                this.emit("unlocked")
+                this.emit(Os8104Events.Unlocked)
                 this.lockInterval = setInterval(() => {
                     this.checkForLock()
                 }, 100)
@@ -346,7 +301,7 @@ export class OS8104A extends EventEmitter {
             fktId,
             opType,
             data
-        }: MostMessage,
+        }: SocketMostSendMessage,
         telId = 0
     ): void {
         console.log(targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data)
@@ -388,18 +343,17 @@ export class OS8104A extends EventEmitter {
     }
 
     sendMultiPartMessage(): void {
-        const tempMessage = { ...this.multiPartMessage }
-        this.multiPartMessage.data.length > 11
-            ? (tempMessage.data = this.multiPartMessage.data.splice(0, 11))
-            : (tempMessage.data = this.multiPartMessage.data)
-        console.log("spliced", this.multiPartMessage.data)
+        const tempMessage = { ...this.multiPartMessage! }
+        this.multiPartMessage!.data.length > 11
+            ? (tempMessage.data = this.multiPartMessage!.data.splice(0, 11))
+            : (tempMessage.data = this.multiPartMessage!.data)
         tempMessage.data = [this.multiPartSequence, ...tempMessage.data]
         let telId
-        // In a multipart message telId represents the beginning, middle and end of the message, telId = 1 means first message, telId = 2 means message continueing
+        // In a multipart message telId represents the beginning, middle and end of the message, telId = 1 means first message, telId = 2 means message continuing
         // telId = 3 means final message
         if (this.multiPartSequence === 0) {
             telId = 1
-        } else if (this.multiPartMessage.data.length < 11) {
+        } else if (this.multiPartMessage!.data.length < 11) {
             telId = 3
         } else {
             telId = 2
@@ -470,15 +424,13 @@ export class OS8104A extends EventEmitter {
         const pllLocked = lockStatus & Registers.bCM2_UNLOCKED
         const lockSource = this.readSingleReg(Registers.REG_bXSR) & Registers.bXSR_FREQ_REG_ACT
         if (pllLocked === 0 && lockSource === 0) {
-            this.emit("locked")
+            this.emit(Os8104Events.Locked)
             console.log("resetting in check")
             this.writeReg(Registers.REG_bMSGC, [
                 this.readSingleReg(Registers.REG_bMSGC) | Registers.bMSGC_RESET_ERR_INT
             ])
             this.transceiverLocked = true
-            if (this.lockInterval !== null) {
-                clearInterval(this.lockInterval)
-            }
+            clearInterval(this.lockInterval)
         }
     }
 
@@ -561,19 +513,13 @@ export class OS8104A extends EventEmitter {
         this.allocCheck = setInterval(() => {
             if (this.allocResult !== null) {
                 console.log("alloc done, setting MRT")
-                if (this.streamAllocTimeout !== null) {
-                    clearTimeout(this.streamAllocTimeout)
-                }
-                if (this.allocCheck !== null) {
-                    clearInterval(this.allocCheck)
-                }
+                clearTimeout(this.streamAllocTimeout)
+                clearInterval(this.allocCheck)
                 this.setMrtSource1(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr)
             }
         }, 20)
         this.streamAllocTimeout = setTimeout(() => {
-            if (this.allocCheck !== null) {
-                clearInterval(this.allocCheck)
-            }
+            clearInterval(this.allocCheck)
             console.log("stream audio timed out on alloc check")
         }, 1000)
     }
@@ -583,13 +529,12 @@ export class OS8104A extends EventEmitter {
         const group = data.readUint8(12)
         const logicalHigh = data.readUint8(13)
         const logicalLow = data.readUint8(14)
-        const result = {
+        return {
             nodePos,
             group,
             logicalHigh,
             logicalLow
         }
-        return result
     }
 
     // Set the MOST routing table, alloc result has to be present, it will the write the source1 data to
@@ -602,12 +547,12 @@ export class OS8104A extends EventEmitter {
         sinkNr: number
     ): void {
         console.log("setting mrt")
-        if (this.allocResult.loc1 > -1) {
+        if (this.allocResult!.loc1 > -1) {
             console.log("mrt running", this.allocResult)
-            this.writeReg(this.allocResult.loc1, [0x49])
-            this.writeReg(this.allocResult.loc2, [0x59])
-            this.writeReg(this.allocResult.loc3, [0x69])
-            this.writeReg(this.allocResult.loc4, [0x79])
+            this.writeReg(this.allocResult!.loc1, [0x49])
+            this.writeReg(this.allocResult!.loc2, [0x59])
+            this.writeReg(this.allocResult!.loc3, [0x69])
+            this.writeReg(this.allocResult!.loc4, [0x79])
             this.sendControlMessage({
                 targetAddressHigh,
                 targetAddressLow,
@@ -646,7 +591,7 @@ export class OS8104A extends EventEmitter {
             this.writeReg(0x66, [bytes[0]])
             this.writeReg(0x76, [bytes[1]])
         }
-        // TODO duplicated from mrtSource, needs to move both to a separate function, not needed either if already unmuted
+        // TODO duplicated from mrtSource, needs to move both to a separate function, not needed either if already un-muted
         setTimeout(() => {
             this.writeReg(Registers.REG_bSDC3, [0x00])
             this.writeReg(Registers.REG_bSDC1, [
@@ -671,10 +616,10 @@ export class OS8104A extends EventEmitter {
         const data = [
             sinkNr,
             3,
-            this.allocResult.loc1,
-            this.allocResult.loc2,
-            this.allocResult.loc3,
-            this.allocResult.loc4
+            this.allocResult!.loc1,
+            this.allocResult!.loc2,
+            this.allocResult!.loc3,
+            this.allocResult!.loc4
         ] // data format is [sinkNumber, srcDelay, channelList]
 
         this.sendControlMessage({
@@ -693,5 +638,3 @@ export class OS8104A extends EventEmitter {
         console.log("mode", mode)
     }
 }
-
-module.exports = OS8104A

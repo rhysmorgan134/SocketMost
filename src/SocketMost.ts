@@ -1,7 +1,21 @@
-const fs = require('fs')
-const net = require('net');
-const unix = require('unix-dgram');
-const Os8104 = require('./OS8104A')
+import fs from 'fs'
+import unix from 'unix-dgram'
+import { OS8104A } from './OS8104A'
+import {
+    AllocResult,
+    EventTypes,
+    GetSource,
+    MasterFoundEvent,
+    MessageOnly,
+    MostMessage,
+    NodePosition,
+    Os8104Events,
+    RawMostRxMessage,
+    RetrieveAudio,
+    SocketMostMessageRx,
+    SocketTypes,
+    Stream
+} from './Messages.js'
 
 const configPath: string = './config.json'
 
@@ -12,12 +26,6 @@ type config = {
     freq: number
 }
 
-type masterRef = {
-    instanceId: number,
-    sourceAddrHigh: number,
-    sourceAddrLow: number
-}
-
 const defaultConfig: config = {
     version: '1.0.0',
     nodeAddress: 272,
@@ -25,12 +33,12 @@ const defaultConfig: config = {
     freq: 48
 }
 
-let connected: boolean = false
-let connectInterval: ReturnType<typeof setInterval> = null
 
+let connected: boolean = false
+let connectInterval: NodeJS.Timer
 let config: config = defaultConfig
-let master: masterRef = null
-let locked = false
+let master: MasterFoundEvent
+
 if (fs.existsSync(configPath)) {
     console.log('file exists')
     config = JSON.parse(fs.readFileSync(configPath).toString())
@@ -39,10 +47,10 @@ if (fs.existsSync(configPath)) {
     fs.writeFileSync(configPath, JSON.stringify(defaultConfig))
 }
 
-let stream = new unix.createSocket('unix_dgram', () => {
+const stream = new unix.createSocket('unix_dgram', () => {
 
 })
-stream.on('error', (error) => {
+stream.on('error', () => {
     if(connected) {
         connected = false
         connectInterval = setInterval(() => {
@@ -65,7 +73,7 @@ stream.bind('/tmp/SocketMost.sock');
 
 connectInterval = setInterval(() => stream.connect('/tmp/SocketMost-client.sock'), 100)
 
-const os8104 = new Os8104( config.nodeAddress, config.groupAddress, config.freq)
+const os8104 = new OS8104A( config.nodeAddress, config.groupAddress, config.freq)
 
 // Call on error
 // stream.on('error', (error) => {
@@ -73,94 +81,107 @@ const os8104 = new Os8104( config.nodeAddress, config.groupAddress, config.freq)
 // });
 
 
-os8104.on('newMessage', (message) => {
-    //console.log(message)
-    let data = {}
-    data.type = message.readUint8(0)
-    data.sourceAddrHigh = message.readUint8(1)
-    data.sourceAddrLow = message.readUint8(2)
-    data.data = message.slice(3)
-    //console.log(data)
+os8104.on(Os8104Events.MostMessageRx, (message: RawMostRxMessage) => {
     if(!master) {
-        if(data.data.readUint8(0) === 2) {
+        if(message.fBlockID === 2) {
             console.log("master found")
-            master = {}
-            master.instanceID = data.data.readUint8(1)
-            master.sourceAddrHigh = data.sourceAddrHigh
-            master.sourceAddrLow = data.sourceAddrLow
-            stream.send(Buffer.from(JSON.stringify({eventType: 'masterFound', ...master})))
+            master = {
+                eventType: EventTypes.MasterFoundEvent,
+                instanceID: message.instanceID,
+                sourceAddrHigh: message.sourceAddressHigh,
+                sourceAddrLow: message.sourceAddressLow
+            }
+            streamSend(master)
         }
     }
-    stream.send(Buffer.from(JSON.stringify({eventType: 'newMessage', ...data})))
-    //console.log("sent message", data)
+    const newMessage: SocketMostMessageRx = {
+        eventType: EventTypes.SocketMostMessageRxEvent,
+        ...message
+    }
+    streamSend(newMessage)
 })
 
-os8104.on('netChanged', (data) => {
-    stream.send(Buffer.from(JSON.stringify({eventType: 'netChanged', ...data})))
+const streamSend = (data: MasterFoundEvent | SocketMostMessageRx | MessageOnly | AllocResult | NodePosition) => {
+    stream.send(Buffer.from(JSON.stringify(data)))
+}
+
+// os8104.on('lockStatus', (data) => {
+//     stream.send(Buffer.from(JSON.stringify({eventType: 'lockStatus', status: data})))
+// })
+
+os8104.on(Os8104Events.Shutdown, () => {
+    streamSend({eventType: 'shutDown'})
 })
 
-os8104.on('lockStatus', (data) => {
-    stream.send(Buffer.from(JSON.stringify({eventType: 'lockStatus', status: data})))
+os8104.on(Os8104Events.AllocResult, (data: AllocResult) => {
+    streamSend({eventType: 'allocResult', ...data})
 })
 
-os8104.on('shutdown', (data) => {
-    stream.send(Buffer.from(JSON.stringify({eventType: 'shutDown'})))
+os8104.on(Os8104Events.MessageSent, () => {
+    streamSend({eventType: 'messageSent'})
 })
 
-os8104.on('allocResult', (data) => {
-    stream.send(Buffer.from(JSON.stringify({eventType: 'allocResult', ...data})))
+os8104.on(Os8104Events.Locked, () => {
+    streamSend({eventType: 'locked'})
 })
 
-os8104.on('messageSent', (data) => {
-    stream.send(Buffer.from(JSON.stringify({eventType: 'messageSent'})))
+os8104.on(Os8104Events.Unlocked, () => {
+    streamSend({eventType: 'unlocked'})
 })
 
-os8104.on('locked', () => {
-    stream.send(Buffer.from(JSON.stringify({eventType: 'locked'})))
-})
-
-os8104.on('unlocked', () => {
-    stream.send(Buffer.from(JSON.stringify({eventType: 'unlocked'})))
-})
-
-stream.on('message', async (data, info) => {
-    let message = JSON.parse(data.toString())
-    console.log('message received', message)
-    switch (message.eventType) {
-        case 'sendControlMessage':
+stream.on(SocketTypes.MessageReceived, async (data: Buffer) => {
+    const event: SocketTypes = JSON.parse(data.toString()).eventType
+    switch (event) {
+        case SocketTypes.SendControlMessage: {
             //console.log("sending", message)
-            message.data = Buffer.from(message.data)
+            const message: MostMessage = JSON.parse(data.toString());
             os8104.sendControlMessage(message)
+            // TODO is this really needed? sendControlMessage doesn't return and is not async, so in what case is this
+            //  actually required? No types set for now as suspect it needs to go
             stream.send(Buffer.from(JSON.stringify({eventType: 'messageSent'})))
             break
-        case 'getNodePosition':
-            let returnData = {}
-            returnData.nodePosition = os8104.getNodePosition()
-            returnData.maxPosition = os8104.getMaxPosition()
-            stream.send(Buffer.from(JSON.stringify({eventType: 'positionUpdate', ...returnData})))
+        }
+        case SocketTypes.GetNodePosition:{
+            const returnData: NodePosition = {
+                nodePosition: os8104.getNodePosition(),
+                maxPosition: os8104.getMaxPosition(),
+                eventType: 'positionUpdate'
+            }
+            // REVIEW This is strange, NodePosition is not stated as a type for streamSend so unsure why no error here
+            //  my guess is that it unions the same MessageDefault as the other typed streamSends (MasterFoundEvent, newMessage)
+            //  which then makes me think there's something grossly incorrect here, leaving for now for review purposes
+            streamSend(returnData)
             break
-        case 'getMaster':
-            console.log("getting master", master)
+        }
+        case SocketTypes.GetMaster: {
             if(master) {
-                stream.send(Buffer.from(JSON.stringify({eventType: 'masterFound', ...master})))
+                streamSend(master)
             }
             break
-        case 'allocate':
+        }
+        case SocketTypes.Allocate:
             console.log("awaited", os8104.allocate())
             break
-        case 'getSource':
-            console.log("getting remote source", message)
-            os8104.getRemoteSource(message.connectionLabel)
+        case SocketTypes.GetSource: {
+            const message: GetSource = JSON.parse(data.toString());
+            // REVIEW don't particularly like this, had to add connection label as a chained property solely for this
+            //  call, need to look into alternatives, it feels like using an outer type (MostMessage in this case)
+            //  for a switch statement is not ideal
+            os8104.getRemoteSource(message.connectionLabel!)
             break
-        case 'stream':
-            console.log("stream request")
+        }
+        case SocketTypes.Stream: {
+            const message: Stream = JSON.parse(data.toString());
             os8104.stream(message)
             break
-        case 'retrieveAudio':
-            console.log("audio request", message)
+        }
+        case SocketTypes.RetrieveAudio: {
+            // TODO remove numbers from key in message
+            const message: RetrieveAudio = JSON.parse(data.toString());
             os8104.retrieveAudio(message)
+        }
     }
-})
+});
 
 
 

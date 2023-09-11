@@ -1,10 +1,10 @@
 import { Registers as reg } from "./Registers"
-import { type Config } from "./OS8104A"
+import { type Config } from "./Messages"
 
 export function getRegisterConfig(
     { nodeAddressLow, nodeAddressHigh, groupAddress }: Config,
     mode: number
-): Map<number, number> {
+): Map<reg, number> {
     console.log(nodeAddressLow, nodeAddressHigh, groupAddress)
     const config = new Map()
 
