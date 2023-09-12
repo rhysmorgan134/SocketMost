@@ -1,9 +1,8 @@
 import fs from 'fs'
 import unix from 'unix-dgram'
-import { OS8104A } from './OS8104A'
+import { OS8104A } from '../driver/OS8104A'
 import {
     AllocResult,
-    EventTypes,
     GetSource,
     MasterFoundEvent,
     MessageOnly,
@@ -15,7 +14,7 @@ import {
     SocketMostMessageRx,
     SocketTypes,
     Stream
-} from './Messages.js'
+} from '../modules/Messages'
 
 const configPath: string = './config.json'
 
@@ -82,11 +81,12 @@ const os8104 = new OS8104A( config.nodeAddress, config.groupAddress, config.freq
 
 
 os8104.on(Os8104Events.MostMessageRx, (message: RawMostRxMessage) => {
+    console.log('message', message)
     if(!master) {
         if(message.fBlockID === 2) {
             console.log("master found")
             master = {
-                eventType: EventTypes.MasterFoundEvent,
+                eventType: Os8104Events.MasterFoundEvent,
                 instanceID: message.instanceID,
                 sourceAddrHigh: message.sourceAddressHigh,
                 sourceAddrLow: message.sourceAddressLow
@@ -95,7 +95,7 @@ os8104.on(Os8104Events.MostMessageRx, (message: RawMostRxMessage) => {
         }
     }
     const newMessage: SocketMostMessageRx = {
-        eventType: EventTypes.SocketMostMessageRxEvent,
+        eventType: Os8104Events.SocketMostMessageRxEvent,
         ...message
     }
     streamSend(newMessage)
@@ -145,7 +145,7 @@ stream.on(SocketTypes.MessageReceived, async (data: Buffer) => {
             const returnData: NodePosition = {
                 nodePosition: os8104.getNodePosition(),
                 maxPosition: os8104.getMaxPosition(),
-                eventType: 'positionUpdate'
+                eventType: Os8104Events.PositionUpdate
             }
             // REVIEW This is strange, NodePosition is not stated as a type for streamSend so unsure why no error here
             //  my guess is that it unions the same MessageDefault as the other typed streamSends (MasterFoundEvent, newMessage)

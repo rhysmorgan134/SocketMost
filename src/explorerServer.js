@@ -5,6 +5,7 @@ const socket = dgram.createSocket('udp4');
 const io = require('socket.io')()
 
 most.on("newMessage", (data) => {
+    console.log("explorer", data)
     io.emit('message', data)
 })
 

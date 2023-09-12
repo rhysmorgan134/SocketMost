@@ -1,5 +1,5 @@
 import { Registers as reg } from "./Registers"
-import { type Config } from "./Messages"
+import { type Config } from "../modules/Messages"
 
 export function getRegisterConfig(
     { nodeAddressLow, nodeAddressHigh, groupAddress }: Config,

@@ -2,7 +2,7 @@ import { Gpio } from "onoff"
 import spi, { type SpiDevice, type SpiOptions } from "spi-device"
 import EventEmitter from "events"
 import { getRegisterConfig } from "./RegisterConfig"
-import { Registers } from "./Registers.js"
+import { Registers } from "./Registers"
 import {
     MostMessage,
     Stream,
@@ -11,7 +11,7 @@ import {
     SocketMostSendMessage,
     RawMostRxMessage,
     Os8104Events
-} from "./Messages";
+} from "../modules/Messages";
 
 const TRANSFER_SPEED = 180000
 

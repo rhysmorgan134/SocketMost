@@ -126,6 +126,9 @@
     "moduleResolution": "node16",
     "outDir": "./dist",
     "declaration": true,
-    "rootDir": "./src"
-  }
+    "rootDir": "./src",
+    "resolveJsonModule": true
+  },
+  "exclude": ["node_modules"],
+  "include": ["src/**/*"]
 }

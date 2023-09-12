@@ -1,10 +1,11 @@
+
 export type MessageDefault = {
     sourceAddrHigh: number
     sourceAddrLow: number
 }
 
 export type MasterFoundEvent = MessageDefault & {
-    eventType: EventTypes.MasterFoundEvent
+    eventType: Os8104Events.MasterFoundEvent
     instanceID: number
 }
 
@@ -120,20 +121,18 @@ export type newMessage = {
 }
 
 export type MessageOnly = {
-    eventType: 'locked' | 'unlocked' | 'shutDown' | 'messageSent'
+    eventType: 'locked' | 'unlocked' | 'shutDown' | 'messageSent' | 'getNodePosition'
 }
 
 export enum Os8104Events {
     MostMessageRx= "newMessageRx",
-    AllocResult= "AllocResult",
+    AllocResult= "allocResult",
     GetSourceResult= "getSourceResult",
     Unlocked= "unlocked",
     Locked= "locked",
     MessageSent= "messageSent",
-    Shutdown = "shutdown"
-}
-
-export enum EventTypes {
+    Shutdown = "shutdown",
+    PositionUpdate = "positionUpdate",
     MasterFoundEvent = 'masterFound',
     SocketMostMessageRxEvent = 'newMessage'
 }
