@@ -58,8 +58,8 @@ export type RetrieveAudio = {
 
 export type RawMostRxMessage = {
     type: number
-    sourceAddressHigh: number
-    sourceAddressLow: number
+    sourceAddrHigh: number
+    sourceAddrLow: number
     fBlockID: number
     instanceID: number
     fktID: number

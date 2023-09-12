@@ -1,4 +1,4 @@
-const {SocketMostClient} = require("socketmost-client");
+const {SocketMostClient} = require("./dist/client/SocketMost-Client");
 const most = new SocketMostClient()
 const dgram = require('dgram')
 const socket = dgram.createSocket('udp4');

@@ -15,6 +15,7 @@ export class DataGram extends EventEmitter{
         this.path = path
         this.connectToPath = connectToPath
         this.socket = new unix.createSocket('unix_dgram', (data: Buffer) => {
+            console.log("socket created")
             this.emit('data', data)
         })
         this.listening = false
@@ -58,5 +59,3 @@ export class DataGram extends EventEmitter{
         this.socket.send(Buffer.from(data))
     }
 }
-
-module.exports = DataGram

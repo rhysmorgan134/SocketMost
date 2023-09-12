@@ -31,10 +31,12 @@ export class SocketMostClient extends EventEmitter{
 
         this.client.on("data", (data) => {
             const event: Os8104Events = JSON.parse(data.toString()).eventType
+            console.log(event)
             switch (event) {
-                case Os8104Events.MostMessageRx:{
+                case Os8104Events.SocketMostMessageRxEvent:{
                     const message: RawMostRxMessage = JSON.parse(data.toString())
-                    this.emit(Os8104Events.MostMessageRx, message)
+                    console.log(message)
+                    this.emit(Os8104Events.SocketMostMessageRxEvent, message)
                     break
                 }
                 case Os8104Events.PositionUpdate: {
@@ -58,7 +60,10 @@ export class SocketMostClient extends EventEmitter{
                 case Os8104Events.AllocResult: {
                     const message: AllocResult = JSON.parse(data.toString())
                     this.emit(Os8104Events.AllocResult, message)
+                    break
                 }
+                default:
+                    console.log("no match", event)
             }
         });
     }

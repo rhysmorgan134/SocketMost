@@ -88,8 +88,8 @@ os8104.on(Os8104Events.MostMessageRx, (message: RawMostRxMessage) => {
             master = {
                 eventType: Os8104Events.MasterFoundEvent,
                 instanceID: message.instanceID,
-                sourceAddrHigh: message.sourceAddressHigh,
-                sourceAddrLow: message.sourceAddressLow
+                sourceAddrHigh: message.sourceAddrHigh,
+                sourceAddrLow: message.sourceAddrLow
             }
             streamSend(master)
         }

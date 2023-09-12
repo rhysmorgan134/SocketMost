@@ -260,8 +260,8 @@ export class OS8104A extends EventEmitter {
     parseMostMessage(message: Buffer) {
         const data: RawMostRxMessage = {
             type: message.readUint8(0),
-            sourceAddressHigh: message.readUint8(1),
-            sourceAddressLow: message.readUint8(2),
+            sourceAddrHigh: message.readUint8(1),
+            sourceAddrLow: message.readUint8(2),
             fBlockID: message.readUint8(3),
             instanceID: message.readUint8(4),
             fktID: (message.slice(5,7).readUint16BE() >> 4),
