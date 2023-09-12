@@ -511,7 +511,7 @@ export class OS8104A extends EventEmitter {
                 console.log("alloc done, setting MRT")
                 clearTimeout(this.streamAllocTimeout)
                 clearInterval(this.allocCheck)
-                this.setMrtSource1(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr)
+                this.setMrtSource1({sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr})
             }
         }, 20)
         this.streamAllocTimeout = setTimeout(() => {
@@ -536,11 +536,11 @@ export class OS8104A extends EventEmitter {
     // Set the MOST routing table, alloc result has to be present, it will the write the source1 data to
     // that routing table, effectively streaming on the network
     setMrtSource1(
-        targetAddressHigh: number,
-        targetAddressLow: number,
-        fBlockID: number,
-        instanceID: number,
-        sinkNr: number
+        {sourceAddrHigh,
+        sourceAddrLow,
+        fBlockID,
+        instanceID,
+        sinkNr}: Stream
     ): void {
         console.log("setting mrt")
         if (this.allocResult!.loc1 > -1) {
@@ -550,8 +550,9 @@ export class OS8104A extends EventEmitter {
             this.writeReg(this.allocResult!.loc3, [0x69])
             this.writeReg(this.allocResult!.loc4, [0x79])
             this.sendControlMessage({
-                targetAddressHigh,
-                targetAddressLow,
+                //TODO need to align these types
+                targetAddressHigh: sourceAddrHigh,
+                targetAddressLow: sourceAddrLow,
                 fBlockID,
                 instanceID,
                 fktId: 0x112,
@@ -560,7 +561,7 @@ export class OS8104A extends EventEmitter {
             })
             setTimeout(() => {
                 console.log("connecting target to sink")
-                this.connectSink(targetAddressHigh, targetAddressLow, fBlockID, instanceID, sinkNr)
+                this.connectSink({sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr})
                 this.writeReg(Registers.REG_bSDC3, [0x00])
                 this.writeReg(Registers.REG_bSDC1, [
                     this.readSingleReg(Registers.REG_bSDC1) | Registers.bSDC1_UNMUTE_SOURCE
@@ -602,11 +603,13 @@ export class OS8104A extends EventEmitter {
     }
 
     connectSink(
-        targetAddressHigh: number,
-        targetAddressLow: number,
-        fBlockID: number,
-        instanceID: number,
-        sinkNr: number
+        {
+            sourceAddrHigh,
+            sourceAddrLow,
+            fBlockID,
+            instanceID,
+            sinkNr
+    }: Stream
     ): void {
         // TODO make srcDelay dynamic, unsure of impact
         const data = [
@@ -619,8 +622,8 @@ export class OS8104A extends EventEmitter {
         ] // data format is [sinkNumber, srcDelay, channelList]
 
         this.sendControlMessage({
-            targetAddressHigh,
-            targetAddressLow,
+            targetAddressHigh: sourceAddrHigh,
+            targetAddressLow: sourceAddrLow,
             fBlockID,
             instanceID,
             fktId: 0x111,
