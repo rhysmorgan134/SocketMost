@@ -74,7 +74,6 @@ export type SocketMostMessageRx = RawMostRxMessage &{
 }
 
 export type Config = {
-    freq: number
     nodeAddressLow: number
     nodeAddressHigh: number
     groupAddress: number
@@ -98,8 +97,8 @@ export type AllocResult = {
     loc3: number
     loc4: number
     cl: number
-    answer1: string
-    freeChannels: number
+    answer1?: "ALLOC_GRANT" | "ALLOC_BUSY" | "ALLOC_DENY" | "WRONG_TARGET" | "ERROR"
+    freeChannels?: number
 }
 
 export type SourceResult = {
@@ -146,4 +145,9 @@ export enum SocketTypes {
     GetSource= 'getSource',
     Stream= 'stream',
     RetrieveAudio= 'retrieveAudio'
+}
+
+export enum Mode {
+    leg = 0,
+    enh = 1
 }

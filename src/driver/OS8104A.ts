@@ -1,16 +1,17 @@
-import { Gpio } from "onoff"
-import spi, { type SpiDevice, type SpiOptions } from "spi-device"
+import {Gpio} from "onoff"
+import spi, {type SpiDevice, type SpiOptions} from "spi-device"
 import EventEmitter from "events"
-import { getRegisterConfig } from "./RegisterConfig"
-import { Registers } from "./Registers"
+import {getRegisterConfig} from "./RegisterConfig"
+import {Registers} from "./Registers"
 import {
-    MostMessage,
-    Stream,
     AllocResult,
-    SourceResult,
-    SocketMostSendMessage,
+    Mode,
+    MostMessage,
+    Os8104Events,
     RawMostRxMessage,
-    Os8104Events
+    SocketMostSendMessage,
+    SourceResult,
+    Stream
 } from "../modules/Messages";
 
 const TRANSFER_SPEED = 180000
@@ -127,12 +128,11 @@ export class OS8104A extends EventEmitter {
         console.log("running config")
         for (const entry of this.getRegisterConfig(
             {
-                freq: this.freq,
                 nodeAddressLow: this.nodeAddressBuf[1],
                 nodeAddressHigh: this.nodeAddressBuf[0],
                 groupAddress: this.groupAddressBuf[0]
             },
-            0
+            Mode.leg
         )) {
             console.log("0", entry[0])
             console.log("1", entry[1])
@@ -447,9 +447,7 @@ export class OS8104A extends EventEmitter {
             loc2,
             loc3,
             loc4,
-            cl,
-            answer1: "",
-            freeChannels: 0
+            cl
         }
         switch (answer1) {
             case 1:
@@ -481,9 +479,7 @@ export class OS8104A extends EventEmitter {
             loc2: -1,
             loc3: -1,
             loc4: -1,
-            cl: -1,
-            answer1: "",
-            freeChannels: -1
+            cl: -1
         }
         this.allocate()
         this.waitForAlloc(sourceAddrHigh, sourceAddrLow, fBlockID, instanceID, sinkNr)

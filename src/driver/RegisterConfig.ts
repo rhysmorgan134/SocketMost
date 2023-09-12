@@ -1,12 +1,12 @@
 import { Registers as reg } from "./Registers"
-import { type Config } from "../modules/Messages"
+import {type Config, Mode} from "../modules/Messages"
 
 export function getRegisterConfig(
     { nodeAddressLow, nodeAddressHigh, groupAddress }: Config,
-    mode: number
+    mode: Mode
 ): Map<reg, number> {
     console.log(nodeAddressLow, nodeAddressHigh, groupAddress)
-    const config = new Map()
+    const config = new Map<reg, number>()
 
     // Testing for 44.1khz, this is untested and just configured as per datasheet, if running at 44.1khz then the crystal is not compatible, so the chip has to be started up in legacy mode
     // and the locking source needs to be set to the RX network.

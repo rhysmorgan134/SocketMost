@@ -1,6 +1,6 @@
 {
   "name": "OS8104A",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "dependencies": {
     "onoff": "^6.0.3",
     "socket.io": "^4.7.1",
