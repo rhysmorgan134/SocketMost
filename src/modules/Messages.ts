@@ -1,3 +1,9 @@
+export type DriverConfig = {
+    version: string,
+    nodeAddress: number,
+    groupAddress: number,
+    freq: number
+}
 
 export type MessageDefault = {
     sourceAddrHigh: number
