@@ -134,7 +134,7 @@ If you have installed as the standard pi user the path should look like the belo
 same besides the user pi
 
 ```shell
-/home/pi/SocketMost
+/home/pi/SocketMost/examples/server.js
 ```
 
 Take note of this, and then create a systemd file
@@ -150,9 +150,9 @@ Description=socketmost
 After=network.target
 
 [Service]
-ExecStart=node /home/pi/SocketMost/SocketMost.js
+ExecStart=node /home/pi/SocketMost/examples/server.js
 Restart=always
-WorkingDirectory=/home/pi/SocketMost/
+WorkingDirectory=/home/pi/SocketMost/examples
 User=pi
 
 [Install]
