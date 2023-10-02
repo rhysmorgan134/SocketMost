@@ -1,5 +1,7 @@
 ## SocketMost for use with [PiMost](https://shop.moderndaymods.com/products/pimost-hat-usb-c-power-most25-only)
 
+### PiMost header info https://github.com/rhysmorgan134/SocketMost/wiki/PiMost
+
 This is a library for use with the PiMost to allow Most Bus messages (Most 25 only) to be sent to various applications. This
 package just gives out a json formatted string over a unix Datagram socket that can then be consumed through 
 which ever application you wish. The implementation is currently at a very early stage, and has been tested
