@@ -23,7 +23,7 @@ export class DataGram extends EventEmitter{
         try {
             fs.unlinkSync(this.path)
         } catch {
-            console.log("error unlinking socket")
+            console.log("No Socket to unlink/Error unlinking")
         }
         this.socket.bind(this.path)
 

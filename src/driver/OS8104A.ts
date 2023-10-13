@@ -94,6 +94,7 @@ export class OS8104A extends EventEmitter {
                 this.writeReg(Registers.REG_bXCR, [
                     this.readSingleReg(Registers.REG_bXCR) & ~Registers.bXCR_OUTPUT_ENABLE
                 ])
+                this.startUp()
             } else {
                 console.log("network status up")
                 this.writeReg(Registers.REG_bXCR, [
@@ -304,7 +305,6 @@ export class OS8104A extends EventEmitter {
         }: SocketMostSendMessage,
         telId = 0
     ): void {
-        console.log(targetAddressHigh, targetAddressLow, fBlockID, instanceID, fktId, opType, data)
         if (data.length > 12) {
             this.multiPartMessage = {
                 targetAddressHigh,
@@ -331,7 +331,6 @@ export class OS8104A extends EventEmitter {
                 const buf = Buffer.alloc(21)
                 const tempData = Buffer.concat([header, Buffer.from(data)])
                 tempData.copy(buf, 0, 0, tempData.length)
-                console.log("sending", buf)
                 this.writeReg(0xc0, [...buf])
                 this.writeReg(Registers.REG_bMSGC, [
                     this.readSingleReg(Registers.REG_bMSGC) | Registers.bMSGC_START_TX
@@ -358,16 +357,12 @@ export class OS8104A extends EventEmitter {
         } else {
             telId = 2
         }
-        console.log("tel id", telId)
         this.sendControlMessage(tempMessage, telId)
         if (telId !== 3) {
             this.once("messageSent", () => {
                 this.multiPartSequence += 1
-                console.log("moving to next sequence", this.multiPartSequence)
                 this.sendMultiPartMessage()
             })
-        } else {
-            console.log("Sequence finished")
         }
     }
 
@@ -425,7 +420,6 @@ export class OS8104A extends EventEmitter {
         const lockSource = this.readSingleReg(Registers.REG_bXSR) & Registers.bXSR_FREQ_REG_ACT
         if (pllLocked === 0 && lockSource === 0) {
             this.emit(Os8104Events.Locked)
-            console.log("resetting in check")
             this.writeReg(Registers.REG_bMSGC, [
                 this.readSingleReg(Registers.REG_bMSGC) | Registers.bMSGC_RESET_ERR_INT
             ])
