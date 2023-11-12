@@ -3,6 +3,7 @@ import spi, {type SpiDevice, type SpiOptions} from "spi-device"
 import EventEmitter from "events"
 import {getRegisterConfig} from "./RegisterConfig"
 import {Registers} from "./Registers"
+import {execSync} from 'child_process'
 import {
     AllocResult,
     Mode,
@@ -22,12 +23,29 @@ const options: SpiOptions = {
     lsbFirst: false
 }
 
+const enum Pi5Gpio {
+    interrupt = 404,
+    fault= 405,
+    status= 415,
+    mostStatus= 425,
+    reset= 416
+}
+
+const enum PiGpio {
+    interrupt = 5,
+    fault= 6,
+    status= 16,
+    mostStatus= 25,
+    reset= 17
+}
+
 export class OS8104A extends EventEmitter {
     readonly freq: number
     readonly spi: SpiDevice
     readonly interrupt: Gpio
     readonly fault: Gpio
     readonly status: Gpio
+    pi5: boolean
     getRegisterConfig: typeof getRegisterConfig
     mostStatus: Gpio
     reset: Gpio
@@ -50,13 +68,14 @@ export class OS8104A extends EventEmitter {
     constructor(nodeAddress: number, groupAddress: number, freq: number) {
         super()
         this.spi = spi.openSync(0, 0, options)
-        this.interrupt = new Gpio(5, "in", "falling")
+        this.pi5 = execSync('cat /sys/firmware/devicetree/base/model').includes('Pi 5')
+        this.interrupt = new Gpio(this.pi5 ? 404 : 5, "in", "falling")
         // TODO this had an unnoticed type error for debounce, now TS has saved the day, it may mess things up
         // now that it's actually working
-        this.fault = new Gpio(6, "in", "both", { debounceTimeout: 50 })
-        this.status = new Gpio(16, "in", "both", { debounceTimeout: 50 })
-        this.mostStatus = new Gpio(26, "in", "both", { debounceTimeout: 10 })
-        this.reset = new Gpio(17, "out")
+        this.fault = new Gpio(this.pi5 ? 405 : 6, "in", "both", { debounceTimeout: 50 })
+        this.status = new Gpio(this.pi5 ? 415 : 16, "in", "both", { debounceTimeout: 50 })
+        this.mostStatus = new Gpio(this.pi5 ? 425 : 26, "in", "both", { debounceTimeout: 10 })
+        this.reset = new Gpio(this.pi5 ? 416 : 17, "out")
         this.freq = freq
         // TODO not sure why these were buffers, need to review
         this.nodeAddressBuf = Buffer.alloc(2)
