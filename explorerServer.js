@@ -3,10 +3,6 @@ const most = new SocketMostClient()
 const dgram = require('dgram')
 const socket = dgram.createSocket('udp4');
 const io = require('socket.io')()
-const {SocketMost} = require( "../dist");
-
-const socketMost = new SocketMost()
-
 
 most.on("newMessage", (data) => {
     console.log("explorer", data)
