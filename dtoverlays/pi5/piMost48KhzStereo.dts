@@ -1,0 +1,95 @@
+//Device tree overlay for generic stereo audio codec. ex) Asahi kasei AK4556
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target = <&sound>;
+        __overlay__ {
+            compatible = "simpale-audio-card";
+            simple-audio-card,name = "PiMost";
+            status="okay";
+
+            capture_link: simple-audio-card,dai-link@0 {
+                format = "i2s";
+
+                // Set RasPi to I2S slave
+                bitclock-master = <&r_codec_dai>;
+                frame-master = <&r_codec_dai>;
+
+                r_cpu_dai: cpu {
+                    sound-dai = <&i2s_clk_consumer>;
+
+                // TDM slot configuration for stereo
+                    dai-tdm-slot-num = <2>;
+                    dai-tdm-slot-width = <16>;
+                };
+
+                r_codec_dai: codec {
+                    sound-dai = <&codec_in>;
+                };
+            };
+
+            playback_link: simple-audio-card,dai-link@1 {
+                format = "i2s";
+
+                // Set RasPi to I2S slave
+                bitclock-master = <&p_codec_dai>;
+                frame-master = <&p_codec_dai>;
+
+                p_cpu_dai: cpu {
+                    sound-dai = <&i2s_clk_consumer>;
+
+                // TDM slot configuration for stereo
+                    dai-tdm-slot-num = <2>;
+                    dai-tdm-slot-width = <16>;
+                };
+
+                p_codec_dai: codec {
+                    sound-dai = <&codec_out>;
+                };
+            };
+        };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            codec_out: spdif-transmitter {
+                #address-cells = <0>;
+                #size-cells = <0>;
+                #sound-dai-cells = <0>;
+                /*
+                    "linux,spdif-dit" is used in generic I2S(transmitter) driver.
+                    You can see details "linux,spdif-dit" by bellow command
+                    modinfo snd_soc_spdif_tx
+                */
+                compatible = "linux,spdif-dit";
+                status = "okay";
+            };
+            codec_in: spdif-receiver {
+                #address-cells = <0>;
+                #size-cells = <0>;
+                #sound-dai-cells = <0>;
+                /*
+                    "linux,spdif-dir" is used in generic I2S(receiver) driver.
+                    You can see details "linux,spdif-dir" by bellow command
+                    modinfo snd_soc_spdif_rx
+                */
+                compatible = "linux,spdif-dir";
+                status = "okay";
+            };
+        };
+    };
+
+    fragment@2 {
+        target = <&i2s_clk_consumer>;
+        __overlay__ {
+            #sound-dai-cells = <0>;
+            status = "okay";
+        };
+    };
+};
+

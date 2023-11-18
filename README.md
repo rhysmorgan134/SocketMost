@@ -15,6 +15,23 @@ First clone this repo
 ```shell
 git clone https://github.com/rhysmorgan134/SocketMost.git
 cd SocketMost
+
+```
+
+### Installing NodeJS
+If you don't have NodeJS installed you can use the help script to install it
+
+```shell
+chmod +x install_nodejs.sh
+./install_nodejs.sh
+```
+
+### Building
+To use the library it needs to be built
+
+```shell
+npm install
+npm run build
 ```
 
 #### Audio Drivers
@@ -26,6 +43,12 @@ the awful Pi audio clocks, we get a great clean signal.
 ```shell
 #change to the overlays directory
 cd dtoverlays
+
+#If using a pi4
+cd pi
+
+#Otherwise if using a pi5
+cd pi5
 
 #build the overlay
 dtc -@ -H epapr -O dtb -o piMost48KhzStereo.dtbo -Wno-unit_address_vs_reg piMost48KhzStereo.dts
@@ -100,32 +123,10 @@ This has changed, the status signal is also used within the driver, so creates a
 
 ### Software install
 
-If you are still in the dtoverlay folder, change up one directory
+If you are still in the dtoverlay folder, change up two directories
 ```shell
-cd ...
+cd ../..
 ```
-
-Now install NodeJs
-
-```shell
-curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-```
-
-```shell
-sudo apt-get install -y nodejs
-```
-
-Verify it has installed with
-```shell
-node -v
-```
-
-Install the SocketMost requirements
-```shell
-npm install
-```
-
-Once finished we can daemonise the process
 
 Get the current directory 
 ```shell
@@ -277,6 +278,20 @@ connected
 }
 ```
 
+#### Using Most-Explorer
+
+I have created a visual tool to help with exploring the Most Bus. Binaries can be downloaded from here:
+
+https://github.com/rhysmorgan134/most-explorer/releases
+
+This can be run on a different computer to the pi (or the same if needed!) the first step is inside the socketmost root directory
+run
+
+```shell
+node explorerServer.js
+```
+
+Then on the computer that has most-explorer installed, launch the app, after a few seconds it should find the socketmost server and you should see messages coming in.
 
 ### Events
 
@@ -304,7 +319,7 @@ The events that the PiMost emits all follow the same json structure
 Possible events and their structures are below
 
 ##### newMessage
-```json
+```javascript
 {
   "eventType": "newMessage",
   "type": 1, //message type as received and specified in the most specification
@@ -318,21 +333,21 @@ Possible events and their structures are below
 ```
 
 ##### locked
-```json
+```javascript
 {
   "eventType": "locked" //PiMost is locked onto the network and ready to send and receive messages
 }
 ```
 
 ##### unlocked
-```json
+```javascript
 {
   "eventType": "unlocked" //PiMost is not locked to the network and will not service message requests
 }
 ```
 
 ##### positionUpdate
-```json
+```javascript
 {
   "eventType": "positionUpdate" //PiMost is not locked to the network and will not service message requests
   "nodePostion": 3 //Position relative to the master, Netblock Function block, must use the as the instance ID in the user application
@@ -341,14 +356,14 @@ Possible events and their structures are below
 ```
 
 ##### messageSent
-```json
+```javascript
 {
   "eventType": 'messageSent' //request to send message has been completed successfully, ready to send next
 }
 ```
 
 ##### masterFound - important as MOST communication kicks off from the master, typical flow is master requests function blocks-> applic respond with implemented blocks
-```json
+```javascript
 {
   "eventType": "masterFound" //Network master has been identified
   "instanceID":  1, //network master instance id
@@ -358,7 +373,7 @@ Possible events and their structures are below
 ```
 
 #### allocResult
-```json
+```javascript
 {
   "eventType": "allocResult",
   "loc1": 4, //first byte that has been assigned to the PiMost and the first byte that PiMost Audio is inserted to
@@ -375,7 +390,7 @@ Possible events and their structures are below
 The PiMost can also receive events in the same way, these are listed below, the format must match and be a json string sent over the UDP socket
 
 ##### sendControlMessage
-```json
+```javascript
 {
   "eventType": "sendControlMessage",
   "targetAddressHigh": 1, //MOST node address high byte to send the message to
@@ -389,21 +404,21 @@ The PiMost can also receive events in the same way, these are listed below, the 
 ```
 
 ##### getNodePosition
-```json
+```javascript
 {
   "eventType": "getNodePosition" //SocketMost will emit positionUpdate with response
 }
 ```
 
 ##### getMaster
-```json
+```javascript
 {
   "eventType": "getMaster" //SocketMost will emit masterFound with response
 }
 ```
 
 ##### allocate - request allocation of 4 bytes for streaming audio onto the bus
-```json
+```javascript
 {
   "eventType": "allocate" //SocketMost will emit allocResult with reference to the PiMosts Streaming bytes
 }
