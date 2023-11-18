@@ -117,7 +117,7 @@ export class SocketMost {
         this.os8104 = new OS8104A(this.config.nodeAddress, this.config.groupAddress, this.config.freq)
 
         this.os8104.on(Os8104Events.MostMessageRx, (message: RawMostRxMessage) => {
-            console.log('message', message)
+            // console.log('message', message)
             if (!this.master) {
                 if (message.fBlockID === 2) {
                     console.log("master found")

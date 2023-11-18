@@ -15,7 +15,6 @@ export class DataGram extends EventEmitter{
         this.path = path
         this.connectToPath = connectToPath
         this.socket = new unix.createSocket('unix_dgram', (data: Buffer) => {
-            console.log("socket created")
             this.emit('data', data)
         })
         this.listening = false
@@ -23,7 +22,7 @@ export class DataGram extends EventEmitter{
         try {
             fs.unlinkSync(this.path)
         } catch {
-            console.log("error unlinking socket")
+            console.log("No Socket to unlink/Error unlinking")
         }
         this.socket.bind(this.path)
 

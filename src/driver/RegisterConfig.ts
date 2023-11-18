@@ -52,7 +52,6 @@ export function getRegisterConfig(
     config.set(
         reg.REG_bXCR,
         reg.bXCR_SLAVE |
-            reg.bXCR_OUTPUT_ENABLE |
             bypass |
             reg.bXCR_ALL_BYPASS_DIS |
             reg.bXCR_REN_DIS

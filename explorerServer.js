@@ -4,8 +4,12 @@ const dgram = require('dgram')
 const socket = dgram.createSocket('udp4');
 const io = require('socket.io')()
 
+
 most.on("newMessage", (data) => {
     console.log("explorer", data)
+    if(data.data?.type === 'Buffer') {
+        data.data = Buffer.from(data.data)
+    }
     io.emit('message', data)
 })
 

@@ -1,6 +1,6 @@
 {
-  "name": "SocketMost",
-  "version": "2.0.0",
+  "name": "socketmost",
+  "version": "2.0.7",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": ["dist"],
