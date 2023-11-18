@@ -3,7 +3,7 @@ import spi, {type SpiDevice, type SpiOptions} from "spi-device"
 import EventEmitter from "events"
 import {getRegisterConfig} from "./RegisterConfig"
 import {Registers} from "./Registers"
-import {execSync} from 'child_process'
+import {spawnSync} from 'child_process'
 import {
     AllocResult,
     Mode,
@@ -64,11 +64,14 @@ export class OS8104A extends EventEmitter {
     multiPartMessage?: MostMessage
     multiPartSequence: number
     transceiverLocked: boolean
+    result : any
 
     constructor(nodeAddress: number, groupAddress: number, freq: number) {
         super()
         this.spi = spi.openSync(0, 0, options)
-        this.pi5 = execSync('cat /sys/firmware/devicetree/base/model').includes('Pi 5')
+
+        this.result = spawnSync('cat', ['/sys/firmware/devicetree/base/model'])
+        this.pi5 = this.result.stdout.toString().includes('Pi 5')
         this.interrupt = new Gpio(this.pi5 ? 404 : 5, "in", "falling")
         // TODO this had an unnoticed type error for debounce, now TS has saved the day, it may mess things up
         // now that it's actually working
