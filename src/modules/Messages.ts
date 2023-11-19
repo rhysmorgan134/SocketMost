@@ -130,6 +130,7 @@ export enum SocketTypes {
   GetSource = 'getSource',
   Stream = 'stream',
   RetrieveAudio = 'retrieveAudio',
+  NewConnection = 'newConnection',
 }
 
 export enum Mode {

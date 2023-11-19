@@ -117,6 +117,9 @@ export class SocketMost {
           // TODO remove numbers from key in message
           const message: RetrieveAudio = JSON.parse(data.toString())
           this.os8104.retrieveAudio(message)
+          break
+        }
+        case SocketTypes.NewConnection: {
         }
       }
     })
@@ -183,10 +186,10 @@ export class SocketMost {
     if (this.config.mostExplorer) {
       this.mostExplorer = new ExplorerServer(
         this.extSendControlMessage.bind(this),
-        this.os8104.getRemoteSource.bind(this),
-        this.os8104.allocate.bind(this),
-        this.os8104.stream.bind(this),
-        this.os8104.retrieveAudio.bind(this),
+        this.extGetRemoteSource.bind(this),
+        this.extAllocate.bind(this),
+        this.extStream.bind(this),
+        this.extRetrieveAudio.bind(this),
       )
     }
 
@@ -197,8 +200,23 @@ export class SocketMost {
     })
   }
 
+  // When passing os8104 functions direct there were undefined for values, even when binding to `this`. I've
+  // created this external functions as a work around
+  // TODO needs revisiting
   extSendControlMessage(message: SocketMostSendMessage) {
     this.os8104.sendControlMessage(message)
+  }
+  extGetRemoteSource(connectionLabel: number) {
+    this.os8104.getRemoteSource(connectionLabel)
+  }
+  extAllocate() {
+    this.os8104.allocate()
+  }
+  extStream(stream: Stream) {
+    this.os8104.stream(stream)
+  }
+  extRetrieveAudio(bytes: RetrieveAudio) {
+    this.os8104.retrieveAudio(bytes)
   }
 
   streamSend = (
