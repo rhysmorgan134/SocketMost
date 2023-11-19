@@ -180,11 +180,11 @@ export class SocketMost {
 
     if (this.config.mostExplorer) {
       this.mostExplorer = new ExplorerServer(
-        this.os8104.sendControlMessage,
-        this.os8104.getRemoteSource,
-        this.os8104.allocate,
-        this.os8104.stream,
-        this.os8104.retrieveAudio,
+        this.os8104.sendControlMessage.bind(this),
+        this.os8104.getRemoteSource.bind(this),
+        this.os8104.allocate.bind(this),
+        this.os8104.stream.bind(this),
+        this.os8104.retrieveAudio.bind(this),
       )
     }
 
