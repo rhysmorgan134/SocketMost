@@ -1,24 +1,33 @@
-const unix = require('unix-dgram')
-const EventEmitter = require('events')
-const fs = require('fs')
+import fs from 'fs'
+import unix from 'unix-dgram'
+import { EventEmitter } from 'events'
 
-class DataGram extends EventEmitter {
-  constructor(path, connectToPath) {
+export class DataGram extends EventEmitter {
+  path: string
+  connectToPath: string
+  socket: unix.Socket
+  listening: boolean
+  connected: boolean
+  connectInterval?: NodeJS.Timeout
+
+  constructor(path: string, connectToPath: string) {
     super()
     this.path = path
     this.connectToPath = connectToPath
-    this.socket = new unix.createSocket('unix_dgram', data => {
+    this.socket = unix.createSocket('unix_dgram', data => {
       this.emit('data', data)
     })
     this.listening = false
     this.connected = false
-    this.connectInterval = null
+    this.connectInterval = undefined
     try {
       fs.unlinkSync(this.path)
-    } catch {}
+    } catch (err) {
+      console.error(err)
+    }
     this.socket.bind(this.path)
 
-    this.socket.on('error', e => {
+    this.socket.on('error', (e: unknown) => {
       if (this.connected) {
         console.log('disconnected')
         this.connected = false
@@ -44,10 +53,9 @@ class DataGram extends EventEmitter {
     })
   }
 
-  write(data) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  write(data: any) {
     // console.log("writing", data)
     this.socket.send(Buffer.from(data))
   }
 }
-
-module.exports = DataGram

@@ -38,7 +38,7 @@ export class SocketMost {
   connected: boolean
   connectInterval?: NodeJS.Timer
   master?: MasterFoundEvent
-  udpSocket?
+  udpSocket: unix.Socket
   mostExplorer?: ExplorerServer
   os8104: OS8104A
 
@@ -46,7 +46,7 @@ export class SocketMost {
     this.configPath = './config.json'
     this.config = DEFAULT_CONFIG
     this.connected = false
-    this.udpSocket = new unix.createSocket('unix_dgram', () => {
+    this.udpSocket = unix.createSocket('unix_dgram', () => {
       if (fs.existsSync(this.configPath)) {
         console.log('file exists')
         this.config = this.checkConfigVersion(
@@ -105,7 +105,7 @@ export class SocketMost {
           // REVIEW don't particularly like this, had to add connection label as a chained property solely for this
           //  call, need to look into alternatives, it feels like using an outer type (MostMessage in this case)
           //  for a switch statement is not ideal
-          this.os8104.getRemoteSource(message.connectionLabel!)
+          this.os8104.getRemoteSource(message.connectionLabel)
           break
         }
         case SocketTypes.Stream: {

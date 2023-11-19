@@ -221,7 +221,7 @@ then run
 
 ```shell
 cd ~/SocketMost
-node test.js
+npm run test:messaging
 ```
 
 If successful you should now see the below output
@@ -288,7 +288,7 @@ This can be run on a different computer to the pi (or the same if needed!) the f
 run
 
 ```shell
-node explorerServer.js
+npm run explorer:server
 ```
 
 Then on the computer that has most-explorer installed, launch the app, after a few seconds it should find the socketmost server and you should see messages coming in.
