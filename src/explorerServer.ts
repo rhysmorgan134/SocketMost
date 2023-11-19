@@ -45,7 +45,7 @@ io.on('connection', socket => {
       targetAddressLow: 0x00,
       fBlockID: 0x02,
       instanceID: 0,
-      fktId: 0xa01,
+      fktID: 0xa01,
       opType: 0x01,
       data: [],
     })
