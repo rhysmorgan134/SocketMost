@@ -109,8 +109,6 @@ export class ExplorerServer extends EventEmitter {
       | AllocResult
       | NodePosition,
   ) {
-    console.log('newMessage', data)
+    this.io.emit('message', data)
   }
-
-  allocResult() {}
 }

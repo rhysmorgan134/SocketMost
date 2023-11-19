@@ -204,6 +204,9 @@ export class SocketMost {
       | NodePosition,
   ) => {
     this.udpSocket.send(Buffer.from(JSON.stringify(data)))
+    if (this.config.mostExplorer) {
+      this.mostExplorer?.newMessageRx(data)
+    }
   }
 
   checkConfigVersion(config: DriverConfig) {
