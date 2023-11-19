@@ -22,7 +22,7 @@ export type MostMessage<T> = {
   eventType?: string
   fBlockID: number
   instanceID: number
-  fktId: number
+  fktID: number
   opType: number
   data: T
 }
@@ -78,6 +78,7 @@ export type AllocResult = {
     | 'WRONG_TARGET'
     | 'ERROR'
   freeChannels?: number
+  eventType: Os8104Events.AllocResult
 }
 
 export type SourceResult = {
@@ -129,6 +130,7 @@ export enum SocketTypes {
   GetSource = 'getSource',
   Stream = 'stream',
   RetrieveAudio = 'retrieveAudio',
+  NewConnection = 'newConnection',
 }
 
 export enum Mode {

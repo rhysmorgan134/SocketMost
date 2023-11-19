@@ -14,12 +14,14 @@ import {
   SocketTypes,
   Stream,
 } from '../modules/Messages'
+import { ExplorerServer } from './ExplorerServer'
 
 export type DriverConfig = {
   version: string
   nodeAddress: number
   groupAddress: number
   freq: number
+  mostExplorer: boolean
 }
 
 const DEFAULT_CONFIG: DriverConfig = {
@@ -27,6 +29,7 @@ const DEFAULT_CONFIG: DriverConfig = {
   nodeAddress: 272,
   groupAddress: 34,
   freq: 48,
+  mostExplorer: true,
 }
 
 export class SocketMost {
@@ -36,6 +39,7 @@ export class SocketMost {
   connectInterval?: NodeJS.Timer
   master?: MasterFoundEvent
   udpSocket: unix.Socket
+  mostExplorer?: ExplorerServer
   os8104: OS8104A
 
   constructor() {
@@ -45,8 +49,9 @@ export class SocketMost {
     this.udpSocket = unix.createSocket('unix_dgram', () => {
       if (fs.existsSync(this.configPath)) {
         console.log('file exists')
-        this.config = JSON.parse(fs.readFileSync(this.configPath).toString())
-        console.log(this.config)
+        this.config = this.checkConfigVersion(
+          JSON.parse(fs.readFileSync(this.configPath).toString()),
+        )
       } else {
         fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
       }
@@ -112,6 +117,14 @@ export class SocketMost {
           // TODO remove numbers from key in message
           const message: RetrieveAudio = JSON.parse(data.toString())
           this.os8104.retrieveAudio(message)
+          break
+        }
+        case SocketTypes.NewConnection: {
+          if (this.os8104.transceiverLocked) {
+            this.streamSend({ eventType: Os8104Events.Locked })
+          } else {
+            this.streamSend({ eventType: Os8104Events.Unlocked })
+          }
         }
       }
     })
@@ -158,7 +171,7 @@ export class SocketMost {
     })
 
     this.os8104.on(Os8104Events.AllocResult, (data: AllocResult) => {
-      this.streamSend({ eventType: Os8104Events.AllocResult, ...data })
+      this.streamSend(data)
     })
 
     this.os8104.on(Os8104Events.MessageSent, () => {
@@ -166,18 +179,49 @@ export class SocketMost {
     })
 
     this.os8104.on(Os8104Events.Locked, () => {
+      console.log('locked')
       this.streamSend({ eventType: Os8104Events.Locked })
     })
 
     this.os8104.on(Os8104Events.Unlocked, () => {
+      console.log('unlocked')
       this.streamSend({ eventType: Os8104Events.Unlocked })
     })
+
+    if (this.config.mostExplorer) {
+      this.mostExplorer = new ExplorerServer(
+        this.extSendControlMessage.bind(this),
+        this.extGetRemoteSource.bind(this),
+        this.extAllocate.bind(this),
+        this.extStream.bind(this),
+        this.extRetrieveAudio.bind(this),
+      )
+    }
 
     process.on('SIGINT', () => {
       console.log('Caught interrupt signal')
       this.udpSocket.close()
       process.exit()
     })
+  }
+
+  // When passing os8104 functions direct there were undefined for values, even when binding to `this`. I've
+  // created this external functions as a work around
+  // TODO needs revisiting
+  extSendControlMessage(message: SocketMostSendMessage) {
+    this.os8104.sendControlMessage(message)
+  }
+  extGetRemoteSource(connectionLabel: number) {
+    this.os8104.getRemoteSource(connectionLabel)
+  }
+  extAllocate() {
+    this.os8104.allocate()
+  }
+  extStream(stream: Stream) {
+    this.os8104.stream(stream)
+  }
+  extRetrieveAudio(bytes: RetrieveAudio) {
+    this.os8104.retrieveAudio(bytes)
   }
 
   streamSend = (
@@ -189,5 +233,26 @@ export class SocketMost {
       | NodePosition,
   ) => {
     this.udpSocket.send(Buffer.from(JSON.stringify(data)))
+    if (this.config.mostExplorer && data.eventType === 'newMessage') {
+      this.mostExplorer?.newMessageRx(data)
+    } else {
+      console.log('discarding', data)
+    }
+  }
+
+  checkConfigVersion(config: DriverConfig) {
+    let modified = false
+    Object.keys(DEFAULT_CONFIG).forEach(key => {
+      if (!Object.keys(config).includes(key)) {
+        console.log('missing config key, setting default')
+        // @ts-ignore
+        config[key] = DEFAULT_CONFIG[key]
+        modified = true
+      }
+    })
+    if (modified) {
+      fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
+    }
+    return config
   }
 }
