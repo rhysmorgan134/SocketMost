@@ -163,7 +163,7 @@ export class SocketMost {
     })
 
     this.os8104.on(Os8104Events.AllocResult, (data: AllocResult) => {
-      this.streamSend({ eventType: Os8104Events.AllocResult, ...data })
+      this.streamSend(data)
     })
 
     this.os8104.on(Os8104Events.MessageSent, () => {
@@ -182,7 +182,7 @@ export class SocketMost {
 
     if (this.config.mostExplorer) {
       this.mostExplorer = new ExplorerServer(
-        this.os8104.sendControlMessage.bind(this),
+        this.extSendControlMessage.bind(this),
         this.os8104.getRemoteSource.bind(this),
         this.os8104.allocate.bind(this),
         this.os8104.stream.bind(this),
@@ -197,6 +197,10 @@ export class SocketMost {
     })
   }
 
+  extSendControlMessage(message: SocketMostSendMessage) {
+    this.os8104.sendControlMessage(message)
+  }
+
   streamSend = (
     data:
       | MasterFoundEvent
@@ -206,8 +210,10 @@ export class SocketMost {
       | NodePosition,
   ) => {
     this.udpSocket.send(Buffer.from(JSON.stringify(data)))
-    if (this.config.mostExplorer) {
+    if (this.config.mostExplorer && data.eventType === 'newMessage') {
       this.mostExplorer?.newMessageRx(data)
+    } else {
+      console.log('discarding', data)
     }
   }
 

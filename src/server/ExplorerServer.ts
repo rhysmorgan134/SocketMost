@@ -18,7 +18,7 @@ const REQ_REGISTRY: SocketMostSendMessage = {
   targetAddressLow: 0x00,
   fBlockID: 0x02,
   instanceID: 0x00,
-  fktId: 0xa01,
+  fktID: 0xa01,
   opType: 0x01,
   data: [],
 }
@@ -83,6 +83,9 @@ export class ExplorerServer extends EventEmitter {
     this.io.on('connection', socket => {
       socket.on('requestRegistry', () => {
         this.sendControlMessage(REQ_REGISTRY)
+      })
+      socket.on('sendControlMessage', (message: SocketMostSendMessage) => {
+        this.sendControlMessage(message)
       })
       socket.on('getSource', data => {
         this.getRemoteSource(data.connectionLabel)

@@ -6,8 +6,8 @@ import { Registers } from './Registers'
 import {
   AllocResult,
   Mode,
-  Os8104Events,
   MostRxMessage,
+  Os8104Events,
   SocketMostSendMessage,
   SourceResult,
   Stream,
@@ -57,13 +57,13 @@ export class OS8104A extends EventEmitter {
     // TODO this had an unnoticed type error for debounce, now TS has saved the day, it may mess things up
     // now that it's actually working
     this.fault = new Gpio(gpiConfig.fault, 'in', 'both', {
-      debounceTimeout: 50,
+      debounceTimeout: 1,
     })
     this.status = new Gpio(gpiConfig.status, 'in', 'both', {
-      debounceTimeout: 50,
+      debounceTimeout: 1,
     })
     this.mostStatus = new Gpio(gpiConfig.mostStatus, 'in', 'both', {
-      debounceTimeout: 10,
+      debounceTimeout: 1,
     })
     this.reset = new Gpio(gpiConfig.reset, 'out')
     this.freq = freq
@@ -276,7 +276,7 @@ export class OS8104A extends EventEmitter {
       sourceAddrLow: message.readUint8(2),
       fBlockID: message.readUint8(3),
       instanceID: message.readUint8(4),
-      fktId: message.slice(5, 7).readUint16BE() >> 4,
+      fktID: message.slice(5, 7).readUint16BE() >> 4,
       opType: message.readUint16BE(5) & 0xf,
       telID: (message.readUint8(7) & 0xf0) >> 4,
       telLen: message.readUint8(7) & 0xf,
@@ -316,7 +316,7 @@ export class OS8104A extends EventEmitter {
       targetAddressLow,
       fBlockID,
       instanceID,
-      fktId,
+      fktID,
       opType,
       data,
     }: SocketMostSendMessage,
@@ -328,7 +328,7 @@ export class OS8104A extends EventEmitter {
         targetAddressLow,
         fBlockID,
         instanceID,
-        fktId,
+        fktID,
         opType,
         data: [...data],
       }
@@ -343,7 +343,7 @@ export class OS8104A extends EventEmitter {
         header.writeUInt8(targetAddressLow, 3)
         header.writeUInt8(fBlockID, 4)
         header.writeUInt8(instanceID, 5)
-        header.writeUInt16BE((fktId << 4) | opType, 6)
+        header.writeUInt16BE((fktID << 4) | opType, 6)
         header.writeUInt8(telId | data.length, 8)
         const buf = Buffer.alloc(21)
         const tempData = Buffer.concat([header, Buffer.from(data)])
@@ -353,7 +353,7 @@ export class OS8104A extends EventEmitter {
           this.readSingleReg(Registers.REG_bMSGC) | Registers.bMSGC_START_TX,
         ])
       } else {
-        console.log("CAN'T SEND NO LOCK")
+        console.log("CAN'T SEND NO LOCK", this.transceiverLocked)
       }
     }
   }
@@ -436,6 +436,7 @@ export class OS8104A extends EventEmitter {
     const pllLocked = lockStatus & Registers.bCM2_UNLOCKED
     const lockSource =
       this.readSingleReg(Registers.REG_bXSR) & Registers.bXSR_FREQ_REG_ACT
+    console.log('checking for lock', lockStatus, pllLocked, lockSource)
     if (pllLocked === 0 && lockSource === 0) {
       this.emit(Os8104Events.Locked)
       this.writeReg(Registers.REG_bMSGC, [
@@ -460,6 +461,7 @@ export class OS8104A extends EventEmitter {
       loc3,
       loc4,
       cl,
+      eventType: Os8104Events.AllocResult,
     }
     switch (answer1) {
       case 1:
@@ -498,6 +500,7 @@ export class OS8104A extends EventEmitter {
       loc3: -1,
       loc4: -1,
       cl: -1,
+      eventType: Os8104Events.AllocResult,
     }
     this.allocate()
     this.waitForAlloc(
@@ -590,7 +593,7 @@ export class OS8104A extends EventEmitter {
         targetAddressLow: sourceAddrLow,
         fBlockID,
         instanceID,
-        fktId: 0x112,
+        fktID: 0x112,
         opType: 0x02,
         data: [sinkNr],
       })
@@ -666,7 +669,7 @@ export class OS8104A extends EventEmitter {
       targetAddressLow: sourceAddrLow,
       fBlockID,
       instanceID,
-      fktId: 0x111,
+      fktID: 0x111,
       opType: 0x02,
       data,
     })
