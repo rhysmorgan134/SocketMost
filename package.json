@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .js,.ts .",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
+    "postinstall": "npm run build",
     "explorer:server": "ts-node src/explorerServer.ts",
     "test:messaging": "ts-node testing/test.ts"
   },
