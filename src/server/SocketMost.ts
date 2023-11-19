@@ -14,12 +14,14 @@ import {
   SocketTypes,
   Stream,
 } from '../modules/Messages'
+import { ExplorerServer } from './ExplorerServer'
 
 export type DriverConfig = {
   version: string
   nodeAddress: number
   groupAddress: number
   freq: number
+  mostExplorer: boolean
 }
 
 const DEFAULT_CONFIG: DriverConfig = {
@@ -27,6 +29,7 @@ const DEFAULT_CONFIG: DriverConfig = {
   nodeAddress: 272,
   groupAddress: 34,
   freq: 48,
+  mostExplorer: true,
 }
 
 export class SocketMost {
@@ -36,6 +39,7 @@ export class SocketMost {
   connectInterval?: NodeJS.Timer
   master?: MasterFoundEvent
   udpSocket?
+  mostExplorer?: ExplorerServer
   os8104: OS8104A
 
   constructor() {
@@ -45,8 +49,9 @@ export class SocketMost {
     this.udpSocket = new unix.createSocket('unix_dgram', () => {
       if (fs.existsSync(this.configPath)) {
         console.log('file exists')
-        this.config = JSON.parse(fs.readFileSync(this.configPath).toString())
-        console.log(this.config)
+        this.config = this.checkConfigVersion(
+          JSON.parse(fs.readFileSync(this.configPath).toString()),
+        )
       } else {
         fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
       }
@@ -173,6 +178,16 @@ export class SocketMost {
       this.streamSend({ eventType: Os8104Events.Unlocked })
     })
 
+    if (this.config.mostExplorer) {
+      this.mostExplorer = new ExplorerServer(
+        this.os8104.sendControlMessage,
+        this.os8104.getRemoteSource,
+        this.os8104.allocate,
+        this.os8104.stream,
+        this.os8104.retrieveAudio,
+      )
+    }
+
     process.on('SIGINT', () => {
       console.log('Caught interrupt signal')
       this.udpSocket.close()
@@ -189,5 +204,21 @@ export class SocketMost {
       | NodePosition,
   ) => {
     this.udpSocket.send(Buffer.from(JSON.stringify(data)))
+  }
+
+  checkConfigVersion(config: DriverConfig) {
+    let modified = false
+    Object.keys(DEFAULT_CONFIG).forEach(key => {
+      if (!Object.keys(config).includes(key)) {
+        console.log('missing config key, setting default')
+        // @ts-ignore
+        config[key] = DEFAULT_CONFIG[key]
+        modified = true
+      }
+    })
+    if (modified) {
+      fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
+    }
+    return config
   }
 }

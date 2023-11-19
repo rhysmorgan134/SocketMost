@@ -1,78 +1,78 @@
-const {SocketMostClient} = require("./dist/client/SocketMost-Client");
+const { SocketMostClient } = require('./dist/client/SocketMost-Client')
 const most = new SocketMostClient()
-const dgram = require('dgram')
-const socket = dgram.createSocket('udp4');
-const io = require('socket.io')()
+// const dgram = require('dgram')
+// const socket = dgram.createSocket('udp4');
+// const io = require('socket.io')()
 
-most.on("newMessage", (data) => {
-    console.log("explorer", data)
-    if(data.data?.type === 'Buffer') {
-        data.data = Buffer.from(data.data)
-    }
-    io.emit('message', data)
+most.on('newMessage', data => {
+  console.log('explorer', data)
+  if (data.data?.type === 'Buffer') {
+    data.data = Buffer.from(data.data)
+  }
+  io.emit('message', data)
 })
 
-most.on('allocResult', (data) => {
-    console.log('alloc res', data)
-    io.emit('allocResult', data)
+most.on('allocResult', data => {
+  console.log('alloc res', data)
+  io.emit('allocResult', data)
 })
 
-socket.on('listening', function () {
-    const address = socket.address();
-    console.log('UDP socket listening on ' + address.address + ":" + address.port);
-});
+// socket.on('listening', function () {
+//     const address = socket.address();
+//     console.log('UDP socket listening on ' + address.address + ":" + address.port);
+// });
+//
+// socket.on('message', function (message, remote) {
+//     console.log('SERVER RECEIVED:', remote.address + ':' + remote.port +' - ' + message);
+//     const response = "Hello there!";
+//     socket.send(response, 0, response.length, remote.port, remote.address);
+// });
 
-socket.on('message', function (message, remote) {
-    console.log('SERVER RECEIVED:', remote.address + ':' + remote.port +' - ' + message);
-    const response = "Hello there!";
-    socket.send(response, 0, response.length, remote.port, remote.address);
-});
+socket.bind('5555')
 
-socket.bind('5555');
-
-io.on('connection', (socket) => {
-    console.log("connection")
-    socket.on('requestRegistry', () => {
-        console.log("got registry request")
-        most.sendAppMessage({
-            eventType: "sendControlMessage",
-            targetAddressHigh: 0x04,
-            targetAddressLow: 0x00,
-            fBlockID: 0x02,
-            instanceID: 0,
-            fktId: 0xA01,
-            opType: 0x01,
-            data: []
-        })
+io.on('connection', socket => {
+  console.log('connection')
+  // socket.on('requestRegistry', () => {
+  //   console.log('got registry request')
+  //   most.sendAppMessage({
+  //     eventType: 'sendControlMessage',
+  //     targetAddressHigh: 0x04,
+  //     targetAddressLow: 0x00,
+  //     fBlockID: 0x02,
+  //     instanceID: 0,
+  //     fktId: 0xa01,
+  //     opType: 0x01,
+  //     data: [],
+  //   })
+  // })
+  socket.on('getSource', data => {
+    console.log('got get source request')
+    most.sendAppMessage({
+      eventType: 'getSource',
+      connectionLabel: data.connectionLabel,
     })
-    socket.on('getSource', (data) => {
-        console.log("got get source request")
-        most.sendAppMessage({
-            eventType: "getSource",
-            connectionLabel: data.connectionLabel
-        })
-    })
+  })
 
-    socket.on('sendControlMessage', (data, msg) => {
-        console.log("send control message", data, msg)
-        most.sendControlMessage(data)
-    })
+  socket.on('sendControlMessage', (data, msg) => {
+    console.log('send control message', data, msg)
+    most.sendControlMessage(data)
+  })
 
-    socket.on('allocate', (data, msg) => {
-        most.allocate()
-    })
+  socket.on('allocate', (data, msg) => {
+    most.allocate()
+  })
 
-    socket.on('stream', (data, msg) => {
-        console.log("stream request", data)
-        most.stream(data)
-    })
+  socket.on('stream', (data, msg) => {
+    console.log('stream request', data)
+    most.stream(data)
+  })
 
-    socket.on('retrieveAudio', (data, msg) => {
-        console.log("explorer sent retrieve audio")
-        most.retrieveAudio(data)
-    })
+  socket.on('retrieveAudio', (data, msg) => {
+    console.log('explorer sent retrieve audio')
+    most.retrieveAudio(data)
+  })
 })
 
 io
 
-io.listen(5556);
+io.listen(5556)
