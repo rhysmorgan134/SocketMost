@@ -76,7 +76,10 @@ export function getRegisterConfig(
   config.set(reg.REG_bSDC2, reg.bSDC2_SCK_32F)
 
   // Transceiver Status
-  config.set(reg.REG_bXSR, reg.bXSR_CODING_ERR_MASK | reg.bXSR_SPDIF_ERR_MASK)
+  config.set(
+    reg.REG_bXSR,
+    reg.bXSR_CODING_ERR_MASK | reg.bXSR_SPDIF_ERR_MASK | reg.bXSR_LOCK_ERR_MASK,
+  )
 
   // Interrupt Enable
   config.set(
