@@ -31,6 +31,7 @@ export class SocketMostClient extends EventEmitter {
       this.getPositions().then(() => {
         console.log('resolved')
       })
+      this.emit('connected')
     })
 
     this.maxPosition = 0
