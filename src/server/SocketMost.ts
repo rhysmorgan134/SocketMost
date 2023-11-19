@@ -120,6 +120,11 @@ export class SocketMost {
           break
         }
         case SocketTypes.NewConnection: {
+          if (this.os8104.transceiverLocked) {
+            this.streamSend({ eventType: Os8104Events.Locked })
+          } else {
+            this.streamSend({ eventType: Os8104Events.Unlocked })
+          }
         }
       }
     })
