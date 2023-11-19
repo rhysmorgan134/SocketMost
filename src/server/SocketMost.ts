@@ -251,7 +251,7 @@ export class SocketMost {
       }
     })
     if (modified) {
-      fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
+      fs.writeFileSync(this.configPath, JSON.stringify(config))
     }
     return config
   }
