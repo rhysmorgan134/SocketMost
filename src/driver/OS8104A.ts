@@ -42,8 +42,8 @@ export class OS8104A extends EventEmitter {
   streamAllocTimeout?: NodeJS.Timeout
   delayTimer?: NodeJS.Timeout
   getSourceTimeout?: NodeJS.Timeout
-  allocCheck?: NodeJS.Timer
-  lockInterval?: NodeJS.Timer
+  allocCheck?: NodeJS.Timeout
+  lockInterval?: NodeJS.Timeout
   multiPartMessage?: TargetMostMessage<number[]>
   multiPartSequence: number
   transceiverLocked: boolean

@@ -11,6 +11,7 @@ import {
   SocketMostSendMessage,
   SocketTypes,
   Stream,
+  GetSource,
 } from '../modules/Messages'
 
 export class SocketMostClient extends EventEmitter {
@@ -113,7 +114,12 @@ export class SocketMostClient extends EventEmitter {
   //     return data
   // }
 
-  sendAppMessage(data: SocketMostSendMessage | MessageOnly) {
+  sendAppMessage(
+    data:
+      | SocketMostSendMessage
+      | MessageOnly
+      | ({ eventType: 'getSource' } & GetSource),
+  ) {
     this.client.write(JSON.stringify(data))
   }
 
