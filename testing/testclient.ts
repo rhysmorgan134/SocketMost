@@ -1,6 +1,6 @@
-import unix from 'unix-dgram'
-import EventEmitter from 'events'
 import fs from 'fs'
+import unix from 'unix-dgram'
+import { EventEmitter } from 'events'
 
 export class DataGram extends EventEmitter {
   path: string
@@ -14,15 +14,16 @@ export class DataGram extends EventEmitter {
     super()
     this.path = path
     this.connectToPath = connectToPath
-    this.socket = unix.createSocket('unix_dgram', (data: Buffer) => {
+    this.socket = unix.createSocket('unix_dgram', data => {
       this.emit('data', data)
     })
     this.listening = false
     this.connected = false
+    this.connectInterval = undefined
     try {
       fs.unlinkSync(this.path)
-    } catch {
-      console.log('No Socket to unlink/Error unlinking')
+    } catch (err) {
+      console.error(err)
     }
     this.socket.bind(this.path)
 
@@ -46,15 +47,14 @@ export class DataGram extends EventEmitter {
 
     this.socket.on('connect', () => {
       console.log('connected')
-      if (this.connectInterval) {
-        clearInterval(this.connectInterval)
-      }
+      clearInterval(this.connectInterval)
       this.connected = true
       this.emit('connect')
     })
   }
 
-  write(data: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  write(data: any) {
     // console.log("writing", data)
     this.socket.send(Buffer.from(data))
   }
