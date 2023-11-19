@@ -21,5 +21,5 @@ export const getPiGpioConfig = (): GpioConfig => {
         mostStatus: 425,
         reset: 416,
       }
-    : { interrupt: 5, fault: 6, status: 16, mostStatus: 25, reset: 17 }
+    : { interrupt: 5, fault: 6, status: 16, mostStatus: 26, reset: 17 }
 }
