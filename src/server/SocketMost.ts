@@ -171,10 +171,12 @@ export class SocketMost {
     })
 
     this.os8104.on(Os8104Events.Locked, () => {
+      console.log('locked')
       this.streamSend({ eventType: Os8104Events.Locked })
     })
 
     this.os8104.on(Os8104Events.Unlocked, () => {
+      console.log('unlocked')
       this.streamSend({ eventType: Os8104Events.Unlocked })
     })
 
