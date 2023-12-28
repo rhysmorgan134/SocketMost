@@ -1,4 +1,4 @@
-import { Registers as reg } from './Registers'
+import { Registers, Registers as reg } from './Registers'
 import { type Config, Mode } from '../modules/Messages'
 
 export function getRegisterConfig(
@@ -56,7 +56,11 @@ export function getRegisterConfig(
   // Transmitter control
   config.set(
     reg.REG_bXCR,
-    reg.bXCR_SLAVE | bypass | reg.bXCR_ALL_BYPASS_DIS | reg.bXCR_REN_DIS,
+    reg.bXCR_SLAVE |
+      bypass |
+      reg.bXCR_ALL_BYPASS_DIS |
+      reg.bXCR_REN_DIS |
+      Registers.bXCR_OUTPUT_ENABLE,
   )
 
   // Source Data control

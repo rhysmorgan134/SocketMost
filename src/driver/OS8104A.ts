@@ -104,7 +104,7 @@ export class OS8104A extends EventEmitter {
           this.readSingleReg(Registers.REG_bXCR) &
             ~Registers.bXCR_OUTPUT_ENABLE,
         ])
-        this.startUp()
+        //this.startUp()
       } else {
         console.log('network status up')
         this.writeReg(Registers.REG_bXCR, [
