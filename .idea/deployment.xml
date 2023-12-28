@@ -5,7 +5,7 @@
       <paths name="pi">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/pi/socketmost-actual/SocketMost" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/home/pi/SocketMost" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
