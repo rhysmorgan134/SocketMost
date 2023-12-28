@@ -190,11 +190,11 @@ export class SocketMost {
 
     if (this.config.mostExplorer) {
       this.mostExplorer = new ExplorerServer(
-        this.extSendControlMessage.bind(this),
-        this.extGetRemoteSource.bind(this),
-        this.extAllocate.bind(this),
-        this.extStream.bind(this),
-        this.extRetrieveAudio.bind(this),
+        this.extSendControlMessage,
+        this.extGetRemoteSource,
+        this.extAllocate,
+        this.extStream,
+        this.extRetrieveAudio,
       )
     }
 
@@ -208,19 +208,19 @@ export class SocketMost {
   // When passing os8104 functions direct there were undefined for values, even when binding to `this`. I've
   // created this external functions as a work around
   // TODO needs revisiting
-  extSendControlMessage(message: SocketMostSendMessage) {
+  extSendControlMessage = (message: SocketMostSendMessage) => {
     this.os8104.sendControlMessage(message)
   }
-  extGetRemoteSource(connectionLabel: number) {
+  extGetRemoteSource = (connectionLabel: number) => {
     this.os8104.getRemoteSource(connectionLabel)
   }
-  extAllocate() {
+  extAllocate = () => {
     this.os8104.allocate()
   }
-  extStream(stream: Stream) {
+  extStream = (stream: Stream) => {
     this.os8104.stream(stream)
   }
-  extRetrieveAudio(bytes: RetrieveAudio) {
+  extRetrieveAudio = (bytes: RetrieveAudio) => {
     this.os8104.retrieveAudio(bytes)
   }
 
@@ -240,7 +240,7 @@ export class SocketMost {
     }
   }
 
-  checkConfigVersion(config: DriverConfig) {
+  checkConfigVersion = (config: DriverConfig) => {
     let modified = false
     Object.keys(DEFAULT_CONFIG).forEach(key => {
       if (!Object.keys(config).includes(key)) {
