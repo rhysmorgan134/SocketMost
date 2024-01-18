@@ -46,16 +46,16 @@ export class SocketMost {
     this.configPath = './config.json'
     this.config = DEFAULT_CONFIG
     this.connected = false
-    this.udpSocket = unix.createSocket('unix_dgram', () => {
-      if (fs.existsSync(this.configPath)) {
-        console.log('file exists')
-        this.config = this.checkConfigVersion(
-          JSON.parse(fs.readFileSync(this.configPath).toString()),
-        )
-      } else {
-        fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
-      }
-    })
+    if (fs.existsSync(this.configPath)) {
+      console.log('file exists')
+      this.config = this.checkConfigVersion(
+        JSON.parse(fs.readFileSync(this.configPath).toString()),
+      )
+    } else {
+      console.log("'file doesn't exist, creating default")
+      fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
+    }
+    this.udpSocket = unix.createSocket('unix_dgram', () => {})
     this.udpSocket.on('error', () => {
       if (this.connected) {
         this.connected = false
@@ -132,6 +132,7 @@ export class SocketMost {
     try {
       fs.unlinkSync('/tmp/SocketMost.sock')
     } catch (e) {
+      console.log('error unlinking')
       /* swallow */
     }
     this.udpSocket.bind('/tmp/SocketMost.sock')

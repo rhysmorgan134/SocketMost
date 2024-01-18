@@ -436,7 +436,7 @@ export class OS8104A extends EventEmitter {
     const pllLocked = lockStatus & Registers.bCM2_UNLOCKED
     const lockSource =
       this.readSingleReg(Registers.REG_bXSR) & Registers.bXSR_FREQ_REG_ACT
-    console.log('checking for lock', lockStatus, pllLocked, lockSource)
+    //console.log('checking for lock', lockStatus, pllLocked, lockSource)
     if (pllLocked === 0 && lockSource === 0) {
       this.emit(Os8104Events.Locked)
       this.writeReg(Registers.REG_bMSGC, [
