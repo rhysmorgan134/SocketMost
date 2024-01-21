@@ -9,6 +9,7 @@ import {
   NodePosition,
   RetrieveAudio,
   SocketMostSendMessage,
+  Source,
   Stream,
 } from '../modules/Messages'
 
@@ -31,6 +32,7 @@ export class ExplorerServer extends EventEmitter {
   allocate: () => void
   stream: (stream: Stream) => void
   retrieveAudio: (audio: RetrieveAudio) => void
+  connectSource: (data: Source) => void
 
   constructor(
     sendControlMessage: (
@@ -41,6 +43,7 @@ export class ExplorerServer extends EventEmitter {
     allocate: () => void,
     stream: (stream: Stream) => void,
     retrieveAudio: (audio: RetrieveAudio) => void,
+    connectSource: (data: Source) => void,
   ) {
     super()
     this.sendControlMessage = sendControlMessage
@@ -48,6 +51,7 @@ export class ExplorerServer extends EventEmitter {
     this.allocate = allocate
     this.stream = stream
     this.retrieveAudio = retrieveAudio
+    this.connectSource = connectSource
     this.io = new Server()
     this.serverListener = dgram.createSocket('udp4')
     this.io.on('connection', socket => {
@@ -98,6 +102,9 @@ export class ExplorerServer extends EventEmitter {
       })
       socket.on('retrieveAudio', (data: RetrieveAudio) => {
         this.retrieveAudio(data)
+      })
+      socket.on('connectSource', (data: Source) => {
+        this.connectSource(data)
       })
     })
 

@@ -299,7 +299,7 @@ export class OS8104A extends EventEmitter {
     if (data.fktID === 0x101 && data.opType === 12) {
       this.allocSourceResult = {
         byte0: data.data[2],
-        byte1: data.data[1],
+        byte1: data.data[3],
       }
     }
     this.emit(Os8104Events.MostMessageRx, data)
@@ -600,7 +600,7 @@ export class OS8104A extends EventEmitter {
       }
     }, 20)
     this.sourceAllocTimeout = setTimeout(() => {
-      clearInterval(this.allocCheck)
+      clearInterval(this.sourceAllocCheck)
       console.log('source audio timed out on alloc check')
     }, 1000)
   }
