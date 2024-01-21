@@ -12,6 +12,7 @@ import {
   SocketTypes,
   Stream,
   GetSource,
+  Source,
 } from '../modules/Messages'
 
 export class SocketMostClient extends EventEmitter {
@@ -154,5 +155,17 @@ export class SocketMostClient extends EventEmitter {
 
   retrieveAudio(data: RetrieveAudio) {
     this.client.write(JSON.stringify({ eventType: 'retrieveAudio', ...data }))
+  }
+
+  connectSource(data: Source) {
+    this.client.write(
+      JSON.stringify({ eventType: SocketTypes.ConnectSource, ...data }),
+    )
+  }
+
+  disconnectSource(data: Source) {
+    this.client.write(
+      JSON.stringify({ eventType: SocketTypes.DisconnectSource, ...data }),
+    )
   }
 }

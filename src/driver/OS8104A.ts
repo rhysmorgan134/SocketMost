@@ -5,10 +5,12 @@ import { getRegisterConfig } from './RegisterConfig'
 import { Registers } from './Registers'
 import {
   AllocResult,
+  AllocSourceResult,
   Mode,
   MostRxMessage,
   Os8104Events,
   SocketMostSendMessage,
+  Source,
   SourceResult,
   Stream,
   TargetMostMessage,
@@ -36,10 +38,13 @@ export class OS8104A extends EventEmitter {
   groupAddressBuf: Buffer
   awaitAlloc: boolean
   allocResult?: AllocResult
+  allocSourceResult: AllocSourceResult
   awaitGetSource: boolean
   getSourceResult: SourceResult | null
   allocTimeout?: NodeJS.Timeout
   streamAllocTimeout?: NodeJS.Timeout
+  sourceAllocTimeout?: NodeJS.Timeout
+  sourceAllocCheck?: NodeJS.Timeout
   delayTimer?: NodeJS.Timeout
   getSourceTimeout?: NodeJS.Timeout
   allocCheck?: NodeJS.Timeout
@@ -77,6 +82,10 @@ export class OS8104A extends EventEmitter {
     this.getSourceResult = null
     this.multiPartSequence = 0
     this.transceiverLocked = true
+    this.allocSourceResult = {
+      byte0: -1,
+      byte1: -1,
+    }
     this.startUp()
     this.getRegisterConfig = getRegisterConfig
 
@@ -104,7 +113,7 @@ export class OS8104A extends EventEmitter {
           this.readSingleReg(Registers.REG_bXCR) &
             ~Registers.bXCR_OUTPUT_ENABLE,
         ])
-        this.startUp()
+        //this.startUp()
       } else {
         console.log('network status up')
         this.writeReg(Registers.REG_bXCR, [
@@ -144,6 +153,7 @@ export class OS8104A extends EventEmitter {
         groupAddress: this.groupAddressBuf[0],
       },
       Mode.leg,
+      this.status.readSync(),
     )) {
       console.log('0', entry[0])
       console.log('1', entry[1])
@@ -284,6 +294,13 @@ export class OS8104A extends EventEmitter {
         message.readUint8(0) > 0x01
           ? message.slice(8, message.length - 1)
           : message.slice(8),
+    }
+    // Check if message is a source allocate result message (0x101)
+    if (data.fktID === 0x101 && data.opType === 12) {
+      this.allocSourceResult = {
+        byte0: data.data[2],
+        byte1: data.data[3],
+      }
     }
     this.emit(Os8104Events.MostMessageRx, data)
   }
@@ -436,7 +453,7 @@ export class OS8104A extends EventEmitter {
     const pllLocked = lockStatus & Registers.bCM2_UNLOCKED
     const lockSource =
       this.readSingleReg(Registers.REG_bXSR) & Registers.bXSR_FREQ_REG_ACT
-    console.log('checking for lock', lockStatus, pllLocked, lockSource)
+    //console.log('checking for lock', lockStatus, pllLocked, lockSource)
     if (pllLocked === 0 && lockSource === 0) {
       this.emit(Os8104Events.Locked)
       this.writeReg(Registers.REG_bMSGC, [
@@ -512,6 +529,51 @@ export class OS8104A extends EventEmitter {
     )
   }
 
+  connectSource({
+    fBlockID,
+    instanceID,
+    sourceNr,
+    sourceAddrLow,
+    sourceAddrHigh,
+  }: Source) {
+    this.clearSource()
+    this.sendControlMessage({
+      data: [sourceNr],
+      fktID: 0x101,
+      opType: 0x02,
+      targetAddressHigh: sourceAddrHigh,
+      targetAddressLow: sourceAddrLow,
+      fBlockID: fBlockID,
+      instanceID: instanceID,
+    })
+    this.waitForSourceAlloc()
+  }
+
+  clearSource() {
+    this.allocSourceResult.byte0 = -1
+    this.allocSourceResult.byte1 = -1
+    this.resetMrtSink1()
+  }
+
+  deAllocateSource({
+    fBlockID,
+    instanceID,
+    sourceNr,
+    sourceAddrLow,
+    sourceAddrHigh,
+  }: Source) {
+    this.sendControlMessage({
+      data: [sourceNr],
+      fktID: 0x102,
+      opType: 0x02,
+      targetAddressHigh: sourceAddrHigh,
+      targetAddressLow: sourceAddrLow,
+      fBlockID: fBlockID,
+      instanceID: instanceID,
+    })
+    this.clearSource()
+  }
+
   retrieveAudio(bytes: {
     '0': number
     '1': number
@@ -519,16 +581,6 @@ export class OS8104A extends EventEmitter {
     '3'?: number
   }): void {
     console.log('retrieve audio in os8104', bytes)
-    const bytesT: number[] = []
-    bytesT.push(bytes['0'])
-    bytesT.push(bytes['1'])
-    if (bytes['2'] !== undefined) {
-      bytesT.push(bytes['2'])
-    }
-    if (bytes['3'] !== undefined) {
-      bytesT.push(bytes['3'])
-    }
-    this.setMrtSink1(bytesT)
   }
 
   waitForAlloc(
@@ -555,6 +607,20 @@ export class OS8104A extends EventEmitter {
     this.streamAllocTimeout = setTimeout(() => {
       clearInterval(this.allocCheck)
       console.log('stream audio timed out on alloc check')
+    }, 1000)
+  }
+
+  waitForSourceAlloc(): void {
+    this.sourceAllocCheck = setInterval(() => {
+      if (this.allocSourceResult.byte0 !== -1) {
+        clearTimeout(this.sourceAllocTimeout)
+        clearInterval(this.sourceAllocCheck)
+        this.setMrtSink1()
+      }
+    }, 20)
+    this.sourceAllocTimeout = setTimeout(() => {
+      clearInterval(this.sourceAllocCheck)
+      console.log('source audio timed out on alloc check')
     }, 1000)
   }
 
@@ -620,30 +686,25 @@ export class OS8104A extends EventEmitter {
     }
   }
 
-  setMrtSink1(bytes: number[]): void {
-    console.log('setting mrt', bytes)
-    if (bytes.length > 2) {
-      this.writeReg(0x46, [bytes[0]])
-      this.writeReg(0x56, [bytes[1]])
-      this.writeReg(0x66, [bytes[2]])
-      this.writeReg(0x76, [bytes[3]])
-    } else {
-      this.writeReg(0x46, [bytes[0]])
-      this.writeReg(0x56, [bytes[1]])
-      this.writeReg(0x66, [bytes[0]])
-      this.writeReg(0x76, [bytes[1]])
-    }
-    // TODO duplicated from mrtSource, needs to move both to a separate function, not needed either if already un-muted
+  setMrtSink1(): void {
+    console.log('setting mrt sink', this.allocSourceResult)
+    this.writeReg(0x46, [this.allocSourceResult.byte0])
+    this.writeReg(0x56, [this.allocSourceResult.byte1])
+    this.writeReg(0x66, [this.allocSourceResult.byte0])
+    this.writeReg(0x76, [this.allocSourceResult.byte1])
     setTimeout(() => {
       this.writeReg(Registers.REG_bSDC3, [0x00])
-      this.writeReg(Registers.REG_bSDC1, [
-        this.readSingleReg(Registers.REG_bSDC1) | Registers.bSDC1_UNMUTE_SOURCE,
-      ])
-      console.log(this.readSingleReg(Registers.REG_bSDC1))
-      console.log(this.readSingleReg(Registers.REG_bSDC2))
-      console.log(this.readSingleReg(Registers.REG_bSDC3))
-      // await this.sourceDataControl3.setMultiple({mute: false, sourceEnable: false})
-      // await this.sourceDataControl1.setMultiple({mute: true})
+    }, 100)
+  }
+
+  resetMrtSink1(): void {
+    console.log('disconnecting mrt')
+    this.writeReg(0x46, [0xf8])
+    this.writeReg(0x56, [0xf8])
+    this.writeReg(0x66, [0xf8])
+    this.writeReg(0x76, [0xf8])
+    setTimeout(() => {
+      this.writeReg(Registers.REG_bSDC3, [0x02])
     }, 100)
   }
 

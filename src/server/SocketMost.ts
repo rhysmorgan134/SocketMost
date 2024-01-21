@@ -13,6 +13,7 @@ import {
   SocketMostSendMessage,
   SocketTypes,
   Stream,
+  Source,
 } from '../modules/Messages'
 import { ExplorerServer } from './ExplorerServer'
 
@@ -46,16 +47,16 @@ export class SocketMost {
     this.configPath = './config.json'
     this.config = DEFAULT_CONFIG
     this.connected = false
-    this.udpSocket = unix.createSocket('unix_dgram', () => {
-      if (fs.existsSync(this.configPath)) {
-        console.log('file exists')
-        this.config = this.checkConfigVersion(
-          JSON.parse(fs.readFileSync(this.configPath).toString()),
-        )
-      } else {
-        fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
-      }
-    })
+    if (fs.existsSync(this.configPath)) {
+      console.log('file exists')
+      this.config = this.checkConfigVersion(
+        JSON.parse(fs.readFileSync(this.configPath).toString()),
+      )
+    } else {
+      console.log("'file doesn't exist, creating default")
+      fs.writeFileSync(this.configPath, JSON.stringify(DEFAULT_CONFIG))
+    }
+    this.udpSocket = unix.createSocket('unix_dgram', () => {})
     this.udpSocket.on('error', () => {
       if (this.connected) {
         this.connected = false
@@ -125,6 +126,17 @@ export class SocketMost {
           } else {
             this.streamSend({ eventType: Os8104Events.Unlocked })
           }
+          break
+        }
+        case SocketTypes.ConnectSource: {
+          console.log('received connect source request')
+          const message: Source = JSON.parse(data.toString())
+          this.os8104.connectSource(message)
+          break
+        }
+        case SocketTypes.DisconnectSource: {
+          const message: Source = JSON.parse(data.toString())
+          this.os8104.deAllocateSource(message)
         }
       }
     })
@@ -132,6 +144,7 @@ export class SocketMost {
     try {
       fs.unlinkSync('/tmp/SocketMost.sock')
     } catch (e) {
+      console.log('error unlinking')
       /* swallow */
     }
     this.udpSocket.bind('/tmp/SocketMost.sock')
@@ -190,11 +203,13 @@ export class SocketMost {
 
     if (this.config.mostExplorer) {
       this.mostExplorer = new ExplorerServer(
-        this.extSendControlMessage.bind(this),
-        this.extGetRemoteSource.bind(this),
-        this.extAllocate.bind(this),
-        this.extStream.bind(this),
-        this.extRetrieveAudio.bind(this),
+        this.extSendControlMessage,
+        this.extGetRemoteSource,
+        this.extAllocate,
+        this.extStream,
+        this.extRetrieveAudio,
+        this.extConnectSource,
+        this.extDisonnectSource,
       )
     }
 
@@ -208,20 +223,28 @@ export class SocketMost {
   // When passing os8104 functions direct there were undefined for values, even when binding to `this`. I've
   // created this external functions as a work around
   // TODO needs revisiting
-  extSendControlMessage(message: SocketMostSendMessage) {
+  extSendControlMessage = (message: SocketMostSendMessage) => {
     this.os8104.sendControlMessage(message)
   }
-  extGetRemoteSource(connectionLabel: number) {
+  extGetRemoteSource = (connectionLabel: number) => {
     this.os8104.getRemoteSource(connectionLabel)
   }
-  extAllocate() {
+  extAllocate = () => {
     this.os8104.allocate()
   }
-  extStream(stream: Stream) {
+  extStream = (stream: Stream) => {
     this.os8104.stream(stream)
   }
-  extRetrieveAudio(bytes: RetrieveAudio) {
+  extRetrieveAudio = (bytes: RetrieveAudio) => {
     this.os8104.retrieveAudio(bytes)
+  }
+
+  extConnectSource = (data: Source) => {
+    this.os8104.connectSource(data)
+  }
+
+  extDisonnectSource = (data: Source) => {
+    this.os8104.deAllocateSource(data)
   }
 
   streamSend = (

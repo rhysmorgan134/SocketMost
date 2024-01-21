@@ -4,8 +4,15 @@ import { type Config, Mode } from '../modules/Messages'
 export function getRegisterConfig(
   { nodeAddressLow, nodeAddressHigh, groupAddress }: Config,
   mode: Mode,
+  status: number,
 ): Map<reg, number> {
-  console.log(nodeAddressLow, nodeAddressHigh, groupAddress)
+  console.log(
+    `addressLow: 0x${nodeAddressLow.toString(
+      16,
+    )} addressHigh: 0x${nodeAddressHigh.toString(
+      16,
+    )} groupAddress: 0x${groupAddress.toString(16)}`,
+  )
   const config = new Map<reg, number>()
 
   // Testing for 44.1khz, this is untested and just configured as per datasheet, if running at 44.1khz then the crystal is not compatible, so the chip has to be started up in legacy mode
@@ -56,7 +63,13 @@ export function getRegisterConfig(
   // Transmitter control
   config.set(
     reg.REG_bXCR,
-    reg.bXCR_SLAVE | bypass | reg.bXCR_ALL_BYPASS_DIS | reg.bXCR_REN_DIS,
+    reg.bXCR_SLAVE |
+      bypass |
+      reg.bXCR_ALL_BYPASS_DIS |
+      reg.bXCR_REN_DIS |
+      status
+      ? 0
+      : reg.bXCR_OUTPUT_ENABLE,
   )
 
   // Source Data control
