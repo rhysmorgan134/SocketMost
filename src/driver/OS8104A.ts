@@ -555,6 +555,25 @@ export class OS8104A extends EventEmitter {
     this.resetMrtSink1()
   }
 
+  deAllocateSource({
+    fBlockID,
+    instanceID,
+    sourceNr,
+    sourceAddrLow,
+    sourceAddrHigh,
+  }: Source) {
+    this.sendControlMessage({
+      data: [sourceNr],
+      fktID: 0x102,
+      opType: 0x02,
+      targetAddressHigh: sourceAddrHigh,
+      targetAddressLow: sourceAddrLow,
+      fBlockID: fBlockID,
+      instanceID: instanceID,
+    })
+    this.clearSource()
+  }
+
   retrieveAudio(bytes: {
     '0': number
     '1': number

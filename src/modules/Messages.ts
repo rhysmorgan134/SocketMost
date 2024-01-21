@@ -145,6 +145,7 @@ export enum SocketTypes {
   RetrieveAudio = 'retrieveAudio',
   NewConnection = 'newConnection',
   ConnectSource = 'connectSource',
+  DisconnectSource = 'disconnectSource',
 }
 
 export enum Mode {

@@ -132,6 +132,11 @@ export class SocketMost {
           console.log('received connect source request')
           const message: Source = JSON.parse(data.toString())
           this.os8104.connectSource(message)
+          break
+        }
+        case SocketTypes.DisconnectSource: {
+          const message: Source = JSON.parse(data.toString())
+          this.os8104.deAllocateSource(message)
         }
       }
     })
@@ -204,6 +209,7 @@ export class SocketMost {
         this.extStream,
         this.extRetrieveAudio,
         this.extConnectSource,
+        this.extDisonnectSource,
       )
     }
 
@@ -235,6 +241,10 @@ export class SocketMost {
 
   extConnectSource = (data: Source) => {
     this.os8104.connectSource(data)
+  }
+
+  extDisonnectSource = (data: Source) => {
+    this.os8104.deAllocateSource(data)
   }
 
   streamSend = (

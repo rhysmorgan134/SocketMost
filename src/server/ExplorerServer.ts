@@ -33,6 +33,7 @@ export class ExplorerServer extends EventEmitter {
   stream: (stream: Stream) => void
   retrieveAudio: (audio: RetrieveAudio) => void
   connectSource: (data: Source) => void
+  disconnectSource: (data: Source) => void
 
   constructor(
     sendControlMessage: (
@@ -44,6 +45,7 @@ export class ExplorerServer extends EventEmitter {
     stream: (stream: Stream) => void,
     retrieveAudio: (audio: RetrieveAudio) => void,
     connectSource: (data: Source) => void,
+    disconnectSource: (data: Source) => void,
   ) {
     super()
     this.sendControlMessage = sendControlMessage
@@ -52,6 +54,7 @@ export class ExplorerServer extends EventEmitter {
     this.stream = stream
     this.retrieveAudio = retrieveAudio
     this.connectSource = connectSource
+    this.disconnectSource = disconnectSource
     this.io = new Server()
     this.serverListener = dgram.createSocket('udp4')
     this.io.on('connection', socket => {
@@ -105,6 +108,9 @@ export class ExplorerServer extends EventEmitter {
       })
       socket.on('connectSource', (data: Source) => {
         this.connectSource(data)
+      })
+      socket.on('disconnectSource', (data: Source) => {
+        this.disconnectSource(data)
       })
     })
 
