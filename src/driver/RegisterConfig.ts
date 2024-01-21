@@ -4,6 +4,7 @@ import { type Config, Mode } from '../modules/Messages'
 export function getRegisterConfig(
   { nodeAddressLow, nodeAddressHigh, groupAddress }: Config,
   mode: Mode,
+  status: number,
 ): Map<reg, number> {
   console.log(nodeAddressLow, nodeAddressHigh, groupAddress)
   const config = new Map<reg, number>()
@@ -60,7 +61,9 @@ export function getRegisterConfig(
       bypass |
       reg.bXCR_ALL_BYPASS_DIS |
       reg.bXCR_REN_DIS |
-      reg.bXCR_OUTPUT_ENABLE,
+      status
+      ? 0
+      : reg.bXCR_OUTPUT_ENABLE,
   )
 
   // Source Data control

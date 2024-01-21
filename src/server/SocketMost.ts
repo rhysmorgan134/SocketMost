@@ -13,6 +13,7 @@ import {
   SocketMostSendMessage,
   SocketTypes,
   Stream,
+  Source,
 } from '../modules/Messages'
 import { ExplorerServer } from './ExplorerServer'
 
@@ -125,6 +126,10 @@ export class SocketMost {
           } else {
             this.streamSend({ eventType: Os8104Events.Unlocked })
           }
+        }
+        case SocketTypes.ConnectSource: {
+          const message: Source = JSON.parse(data.toString())
+          this.os8104.connectSource(message)
         }
       }
     })

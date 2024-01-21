@@ -61,6 +61,19 @@ export type Stream = {
   sourceAddrLow: number
 }
 
+export type Source = {
+  fBlockID: number
+  instanceID: number
+  sourceNr: number
+  sourceAddrHigh: number
+  sourceAddrLow: number
+}
+
+export type AllocSourceResult = {
+  byte0: number
+  byte1: number
+}
+
 export type GetSource = {
   connectionLabel: number
 }
@@ -131,6 +144,7 @@ export enum SocketTypes {
   Stream = 'stream',
   RetrieveAudio = 'retrieveAudio',
   NewConnection = 'newConnection',
+  ConnectSource = 'connectSource',
 }
 
 export enum Mode {
