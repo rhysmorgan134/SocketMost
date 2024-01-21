@@ -6,7 +6,13 @@ export function getRegisterConfig(
   mode: Mode,
   status: number,
 ): Map<reg, number> {
-  console.log(nodeAddressLow, nodeAddressHigh, groupAddress)
+  console.log(
+    `addressLow: ${nodeAddressLow.toString(
+      16,
+    )} addressHigh: ${nodeAddressHigh.toString(
+      16,
+    )} groupAddress: ${groupAddress.toString(16)}`,
+  )
   const config = new Map<reg, number>()
 
   // Testing for 44.1khz, this is untested and just configured as per datasheet, if running at 44.1khz then the crystal is not compatible, so the chip has to be started up in legacy mode
