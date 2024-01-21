@@ -7,11 +7,11 @@ export function getRegisterConfig(
   status: number,
 ): Map<reg, number> {
   console.log(
-    `addressLow: ${nodeAddressLow.toString(
+    `addressLow: 0x${nodeAddressLow.toString(
       16,
-    )} addressHigh: ${nodeAddressHigh.toString(
+    )} addressHigh: 0x${nodeAddressHigh.toString(
       16,
-    )} groupAddress: ${groupAddress.toString(16)}`,
+    )} groupAddress: 0x${groupAddress.toString(16)}`,
   )
   const config = new Map<reg, number>()
 
