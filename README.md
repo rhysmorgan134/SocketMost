@@ -66,6 +66,19 @@ alternate-sample-rate = 48000
 default-sample-channels = 2
 default-channel-map = front-left,front-right
 
+#Save the file then proceed
+
+arecord -l
+
+#Take not of the card and device number
+
+sudo nano /etc/pulse/default.pa
+
+#add the below to the end of the file replace the 0 and 1 with you card and device number from above
+
+load-module module-alsa-source device=hw:c,d
+.ifexists module-udev-detect.so
+
 ```
 
 #### Canbus Set up - Optional
