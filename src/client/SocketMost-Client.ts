@@ -162,4 +162,10 @@ export class SocketMostClient extends EventEmitter {
       JSON.stringify({ eventType: SocketTypes.ConnectSource, ...data }),
     )
   }
+
+  disconnectSource(data: Source) {
+    this.client.write(
+      JSON.stringify({ eventType: SocketTypes.DisconnectSource, ...data }),
+    )
+  }
 }
