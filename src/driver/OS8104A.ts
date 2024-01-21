@@ -562,16 +562,6 @@ export class OS8104A extends EventEmitter {
     '3'?: number
   }): void {
     console.log('retrieve audio in os8104', bytes)
-    const bytesT: number[] = []
-    bytesT.push(bytes['0'])
-    bytesT.push(bytes['1'])
-    if (bytes['2'] !== undefined) {
-      bytesT.push(bytes['2'])
-    }
-    if (bytes['3'] !== undefined) {
-      bytesT.push(bytes['3'])
-    }
-    this.setMrtSink1(bytesT)
   }
 
   waitForAlloc(
