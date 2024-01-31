@@ -74,7 +74,7 @@ arecord -l
 
 sudo nano /etc/pulse/default.pa
 
-#add the below to the end of the file replace the 0 and 1 with you card and device number from above
+#add the below to the end of the file replace the c and d with you card and device number from above
 
 load-module module-alsa-source device=hw:c,d
 .ifexists module-udev-detect.so
