@@ -8,7 +8,7 @@
     fragment@0 {
         target = <&sound>;
         __overlay__ {
-            compatible = "simpale-audio-card";
+            compatible = "simple-audio-card";
             simple-audio-card,name = "PiMost";
             status="okay";
 
