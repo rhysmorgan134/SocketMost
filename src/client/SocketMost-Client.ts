@@ -13,6 +13,7 @@ import {
   Stream,
   GetSource,
   Source,
+  DeallocResult,
 } from '../modules/Messages'
 
 export class SocketMostClient extends EventEmitter {
@@ -67,6 +68,11 @@ export class SocketMostClient extends EventEmitter {
         case Os8104Events.AllocResult: {
           const message: AllocResult = JSON.parse(data.toString())
           this.emit(Os8104Events.AllocResult, message)
+          break
+        }
+        case Os8104Events.DeallocResult: {
+          const message: DeallocResult = JSON.parse(data.toString())
+          this.emit(Os8104Events.DeallocResult, message)
           break
         }
         default:
