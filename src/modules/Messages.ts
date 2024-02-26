@@ -94,6 +94,16 @@ export type AllocResult = {
   eventType: Os8104Events.AllocResult
 }
 
+export type DeallocResult = {
+  answer?:
+    | 'DEALLOC_GRANT'
+    | 'DEALLOC_BUSY'
+    | 'DEALLOC_WRONG'
+    | 'WRONG_TARGET'
+    | 'ERROR'
+  eventType: Os8104Events.DeallocResult
+}
+
 export type SourceResult = {
   nodePos: number
   group: number
@@ -132,6 +142,7 @@ export enum Os8104Events {
   PositionUpdate = 'positionUpdate',
   MasterFoundEvent = 'masterFound',
   SocketMostMessageRxEvent = 'newMessage',
+  DeallocResult = 'deallocResult',
 }
 
 export enum SocketTypes {
@@ -146,6 +157,8 @@ export enum SocketTypes {
   NewConnection = 'newConnection',
   ConnectSource = 'connectSource',
   DisconnectSource = 'disconnectSource',
+  StopStream = 'stopStream',
+  Deallocate = 'deallocate',
 }
 
 export enum Mode {

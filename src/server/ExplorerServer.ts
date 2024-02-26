@@ -3,6 +3,7 @@ import { Server } from 'socket.io'
 import dgram from 'dgram'
 import {
   AllocResult,
+  DeallocResult,
   MasterFoundEvent,
   MessageOnly,
   MostRxMessage,
@@ -34,6 +35,7 @@ export class ExplorerServer extends EventEmitter {
   retrieveAudio: (audio: RetrieveAudio) => void
   connectSource: (data: Source) => void
   disconnectSource: (data: Source) => void
+  deallocate: () => void
 
   constructor(
     sendControlMessage: (
@@ -46,6 +48,7 @@ export class ExplorerServer extends EventEmitter {
     retrieveAudio: (audio: RetrieveAudio) => void,
     connectSource: (data: Source) => void,
     disconnectSource: (data: Source) => void,
+    deallocate: () => void,
   ) {
     super()
     this.sendControlMessage = sendControlMessage
@@ -55,6 +58,7 @@ export class ExplorerServer extends EventEmitter {
     this.retrieveAudio = retrieveAudio
     this.connectSource = connectSource
     this.disconnectSource = disconnectSource
+    this.deallocate = deallocate
     this.io = new Server()
     this.serverListener = dgram.createSocket('udp4')
     this.io.on('connection', socket => {
@@ -112,6 +116,9 @@ export class ExplorerServer extends EventEmitter {
       socket.on('disconnectSource', (data: Source) => {
         this.disconnectSource(data)
       })
+      socket.on('deallocate', () => {
+        this.deallocate()
+      })
     })
 
     this.serverListener.bind(5555)
@@ -123,7 +130,8 @@ export class ExplorerServer extends EventEmitter {
       | MostRxMessage
       | MessageOnly
       | AllocResult
-      | NodePosition,
+      | NodePosition
+      | DeallocResult,
   ) {
     this.io.emit('message', data)
   }
