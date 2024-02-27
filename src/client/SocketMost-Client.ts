@@ -155,6 +155,10 @@ export class SocketMostClient extends EventEmitter {
     this.client.write(JSON.stringify({ eventType: 'allocate' }))
   }
 
+  deallocate() {
+    this.client.write(JSON.stringify({ eventType: 'deallocate' }))
+  }
+
   stream(data: Stream) {
     this.client.write(JSON.stringify({ eventType: 'stream', ...data }) + '\r\n')
   }
