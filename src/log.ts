@@ -1,6 +1,10 @@
 import winston from 'winston'
 
-winston.addColors({ driver: 'bold cyan', socket: 'bold magenta' })
+winston.addColors({
+  driver: 'bold cyan',
+  socket: 'bold magenta',
+  app: 'bold spring green',
+})
 const colorizer = winston.format.colorize()
 
 winston.loggers.add('driverLogger', {

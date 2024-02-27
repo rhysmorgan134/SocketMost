@@ -147,7 +147,10 @@ export class OS8104A extends EventEmitter {
       .then(() => {
         this.logger.debug('stopping reset')
         this.reset.writeSync(1)
-        this.interrupt.watch(() => {
+        this.interrupt.watch(e => {
+          if (e) {
+            this.logger.error(`error setting interrupt watch`)
+          }
           this.logger.info('initial reset complete carrying out init')
           this.resetOs8104()
         })
