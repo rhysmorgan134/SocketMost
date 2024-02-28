@@ -175,7 +175,7 @@ export class OS8104A extends EventEmitter {
         groupAddress: this.groupAddressBuf[0],
       },
       Mode.leg,
-      this.status.readSync(),
+      this.mostStatus.readSync(),
     )) {
       this.logger.debug(
         `writing registry: ${entry[0].toString(
