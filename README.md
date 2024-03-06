@@ -136,6 +136,100 @@ This has changed, the status signal is also used within the driver, so creates a
 
 ### Software install
 
+Change into the root directory then run
+
+`npm run build`
+
+followed by 
+
+`cd examples`
+
+`LOG_LEVEL_DEBUG node server.js`
+
+You should see a bunch of messages out on the console. An example of a healthy start up is below 
+
+```shell
+pi@raspberrypi:~/SocketMost/examples $ LOG_LEVEL=debug node server.js
+info:    config file exists: {"version":"1.0.0","nodeAddress":366,"groupAddress":34,"freq":48,"mostExplorer":true} SocketMost
+info:    creating driver nodeAddress 0x16e groupAddress: 0x22 freq: 48 SocketMost
+info:    GPIO config: {"interrupt":404,"fault":405,"status":415,"mostStatus":425,"reset":416} OS8104 Driver
+info:    starting up OS8104 Driver
+info:    resetting OS8104 Driver
+debug:   writing reset OS8104 Driver
+debug:   waiting reset OS8104 Driver
+info:    most explorer enabled, starting server.... SocketMost
+Listening for Most-Explorer requests on 0.0.0.0:5555
+fault 1
+debug:   stopping reset OS8104 Driver
+info:    initial reset complete carrying out init OS8104 Driver
+debug:   removing all interrupts OS8104 Driver
+info:    running config OS8104 Driver
+addressLow: 0x6e addressHigh: 0x1 groupAddress: 0x22
+debug:   writing registry: 8a with value: 1 OS8104 Driver
+debug:   writing registry: 8b with value: 6e OS8104 Driver
+debug:   writing registry: 89 with value: 22 OS8104 Driver
+debug:   writing registry: 83 with value: 0 OS8104 Driver
+debug:   writing registry: 8d with value: 3 OS8104 Driver
+debug:   writing registry: 92 with value: 2 OS8104 Driver
+debug:   writing registry: 80 with value: 0 OS8104 Driver
+debug:   writing registry: 82 with value: d3 OS8104 Driver
+debug:   writing registry: 8c with value: 40 OS8104 Driver
+debug:   writing registry: 81 with value: 50 OS8104 Driver
+debug:   writing registry: 88 with value: 7 OS8104 Driver
+debug:   writing registry: 85 with value: f OS8104 Driver
+warn:    most error active OS8104 Driver
+Error 1 91
+error:   parsing fault mask: 5b OS8104 Driver
+error:   Error: transceiver lock error OS8104 Driver
+warn:    transceiver unlocked OS8104 Driver
+fault 0
+debug:   checking for lock OS8104 Driver
+debug:   lock status: 0x42  OS8104 Driver
+debug:   pllLocked: 0 OS8104 Driver
+debug:   Lock Source: 0 OS8104 Driver
+warn:    locked OS8104 Driver
+debug:   message received OS8104 Driver
+debug:   MOST message parsed: {"type":0,"sourceAddrHigh":1,"sourceAddrLow":128,"fBlockID":49,"instanceID":2,"fktID":1043,"opType":12,"telID":1,"telLen":12,"data":{"type":"Buffer","data":[0,4,0,1,0,1,1,0,1,0,21,0]}} OS8104 Driver
+debug:   message received OS8104 Driver
+debug:   MOST message parsed: {"type":0,"sourceAddrHigh":1,"sourceAddrLow":128,"fBlockID":49,"instanceID":2,"fktID":3124,"opType":12,"telID":1,"telLen":12,"data":{"type":"Buffer","data":[0,0,1,0,0,21,0,1,0,1,1,0]}} OS8104 Driver
+debug:   message received OS8104 Driver
+debug:   MOST message parsed: {"type":0,"sourceAddrHigh":1,"sourceAddrLow":128,"fBlockID":49,"instanceID":2,"fktID":3124,"opType":12,"telID":3,"telLen":8,"data":{"type":"Buffer","data":[2,0,0,0,0,1,1,0,0,0,0,0]}} OS8104 Driver
+debug:   message received OS8104 Driver
+debug:   MOST message parsed: {"type":0,"sourceAddrHigh":1,"sourceAddrLow":128,"fBlockID":49,"instanceID":2,"fktID":514,"opType":12,"telID":0,"telLen":2,"data":{"type":"Buffer","data":[0,1,0,0,0,0,0,0,0,0,0,0]}} OS8104 Driver
+debug:   message received OS8104 Driver
+debug:   MOST message parsed: {"type":0,"sourceAddrHigh":1,"sourceAddrLow":128,"fBlockID":49,"instanceID":2,"fktID":1042,"opType":12,"telID":0,"telLen":1,"data":{"type":"Buffer","data":[3,0,0,0,0,0,0,0,0,0,0,0]}} OS8104 Driver
+```
+
+#### Updating
+
+Open a terminal in the socketmost root directory, run
+
+```shell
+git pull
+```
+
+Followed by 
+
+```shell
+npm run build
+```
+
+The latest version will then run when you launch server.js
+
+#### Debug levels
+
+There are various minimum log levels supported through the use of winston, default is info
+
+```shell
+LOG_LEVEL=silly
+LOG_LEVEL=debug
+LOG_LEVEL=info
+LOG_LEVEL=warn
+LOG_LEVEL=error
+```
+
+### Running as a service
+
 If you are still in the dtoverlay folder, change up two directories
 ```shell
 cd ../..
@@ -189,119 +283,17 @@ now reboot the pi
 sudo reboot now
 ```
 
-#### Testing
-
-You should now be able to test the PiMost. Regardless of whether it is in a MOST network you should be able to look
-at the systemd logs
-
-```shell
-journalctl -u socketmost.service -b
-```
-
-The output should be similar to the below
-
-```shell
-Jul 17 13:33:27 raspberrypi systemd[1]: Started socketmost.
-Jul 17 13:33:30 raspberrypi node[577]: file exists
-Jul 17 13:33:30 raspberrypi node[577]: { version: '1.0.0', nodeAddress: 272, groupAddress: 34 }
-Jul 17 13:33:30 raspberrypi node[577]: running config
-Jul 17 13:33:30 raspberrypi node[577]: 16 1 <Buffer 22>
-Jul 17 13:33:30 raspberrypi node[577]: 0 138
-Jul 17 13:33:30 raspberrypi node[577]: 1 1
-Jul 17 13:33:30 raspberrypi node[577]: 0 139
-Jul 17 13:33:30 raspberrypi node[577]: 1 16
-Jul 17 13:33:30 raspberrypi node[577]: 0 137
-Jul 17 13:33:30 raspberrypi node[577]: 1 <Buffer 22>
-Jul 17 13:33:30 raspberrypi node[577]: 0 131
-Jul 17 13:33:30 raspberrypi node[577]: 1 0
-Jul 17 13:33:30 raspberrypi node[577]: 0 128
-Jul 17 13:33:30 raspberrypi node[577]: 1 99
-Jul 17 13:33:30 raspberrypi node[577]: 0 130
-Jul 17 13:33:30 raspberrypi node[577]: 1 195
-Jul 17 13:33:30 raspberrypi node[577]: 0 140
-Jul 17 13:33:30 raspberrypi node[577]: 1 64
-Jul 17 13:33:30 raspberrypi node[577]: 0 129
-Jul 17 13:33:30 raspberrypi node[577]: 1 80
-Jul 17 13:33:30 raspberrypi node[577]: 0 136
-Jul 17 13:33:30 raspberrypi node[577]: 1 7
-Jul 17 13:33:30 raspberrypi node[577]: 0 133
-Jul 17 13:33:30 raspberrypi node[577]: 1 15
-
-```
-
-This shows a successful boot, and then the values written to registers on start up. If you want to test messaging and activity received over MOST
-then run
-
-```shell
-cd ~/SocketMost
-npm run test:messaging
-```
-
-If successful you should now see the below output
-
-```shell
-connecting /tmp/SocketMost.sock
-connected
-connected
-```
-
-If you don't then check the status of the socketmost service
-```shell
-systemctl status socketmost.service
-```
-
-and check the logs
-```shell
-
-```
-
-If connected and you are on the MOST network, then you can wait to see a message, the output should be similar to the below
-
-```shell
-connecting /tmp/SocketMost.sock
-connected
-connected
-{
-  eventType: 'newMessage',
-  type: 1,
-  sourceAddrHigh: 1,
-  sourceAddrLow: 97,
-  data: {
-    type: 'Buffer',
-    data: [
-      1, 2, 0, 1, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0
-    ]
-  }
-}
-{
-  eventType: 'newMessage',
-  type: 1,
-  sourceAddrHigh: 1,
-  sourceAddrLow: 97,
-  data: {
-    type: 'Buffer',
-    data: [
-      1, 2, 0, 1, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0
-    ]
-  }
-}
-```
-
 #### Using Most-Explorer
 
 I have created a visual tool to help with exploring the Most Bus. Binaries can be downloaded from here:
 
 https://github.com/rhysmorgan134/most-explorer/releases
 
-This can be run on a different computer to the pi (or the same if needed!) the first step is inside the socketmost root directory
+This can be run on a different computer to the pi (or the same if needed!) the first step is inside the socketmost/examples directory
 run
 
 ```shell
-npm run explorer:server
+node server.js
 ```
 
 Then on the computer that has most-explorer installed, launch the app, after a few seconds it should find the socketmost server and you should see messages coming in.
