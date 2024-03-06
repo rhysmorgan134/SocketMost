@@ -1,5 +1,7 @@
 ## SocketMost for use with [PiMost](https://shop.moderndaymods.com/products/pimost-hat-usb-c-power-most25-only)
 
+***
+
 ### PiMost header info https://github.com/rhysmorgan134/SocketMost/wiki/PiMost
 
 This is a library for use with the PiMost to allow Most Bus messages (Most 25 only) to be sent to various applications. This
@@ -8,6 +10,8 @@ which ever application you wish. The implementation is currently at a very early
 on a Jaguar and Land rover system running at 48khz. In theory 44.1khz should be useable but will need some configuration
 changes around the registers (as a hint look into legacy start up mode, and only using the RX from the transceiver as the locking source) this is 
 untested and no guarantee it will work in the way highlighted below.
+
+***
 
 ### Installation
 
@@ -18,6 +22,8 @@ cd SocketMost
 
 ```
 
+***
+
 ### Installing NodeJS
 If you don't have NodeJS installed you can use the help script to install it
 
@@ -26,6 +32,8 @@ chmod +x install_nodejs.sh
 ./install_nodejs.sh
 ```
 
+***
+
 ### Building
 To use the library it needs to be built
 
@@ -33,6 +41,8 @@ To use the library it needs to be built
 npm install
 npm run build
 ```
+
+***
 
 #### Audio Drivers
 
@@ -81,6 +91,8 @@ load-module module-alsa-source device=hw:c,d
 
 ```
 
+***
+
 #### Canbus Set up - Optional
 If you wish to make use of the PiMost Canbus channel, then follow the below
 
@@ -91,12 +103,16 @@ sudo apt install can-utils
 
 Then follow the optional steps in Boot Config section below
 
+***
+
 #### Graceful shut down
 
 If the shutdown jumper is not in place, then after MOST network activity stops, power will be cut from the supply after ~30seconds.
 The idea of this is that when MOST activity stops, we pick this up via GPIO, and after a configurable delay the Pi gets shutdown gracefully
 then after 30 seconds of the last activity power then gets completely cut, lowering the consumption to around 0.5ma. This works with
 both the USB-C power PiMost and also the 12v supply PiMost. Follow the relevant part of the Boot config section to enable this.
+
+***
 
 #### Boot config
 
@@ -133,6 +149,8 @@ dtoverlay=gpio-shutdown,gpio_pin=26,active_low=0,debounce=2000
 ```
 </strike>
 This has changed, the status signal is also used within the driver, so creates an access error, it's recommended to implement within the driver by executing a shutdown command
+
+***
 
 ### Software install
 
@@ -200,6 +218,8 @@ debug:   message received OS8104 Driver
 debug:   MOST message parsed: {"type":0,"sourceAddrHigh":1,"sourceAddrLow":128,"fBlockID":49,"instanceID":2,"fktID":1042,"opType":12,"telID":0,"telLen":1,"data":{"type":"Buffer","data":[3,0,0,0,0,0,0,0,0,0,0,0]}} OS8104 Driver
 ```
 
+***
+
 #### Updating
 
 Open a terminal in the socketmost root directory, run
@@ -216,6 +236,8 @@ npm run build
 
 The latest version will then run when you launch server.js
 
+***
+
 #### Debug levels
 
 There are various minimum log levels supported through the use of winston, default is info
@@ -227,6 +249,8 @@ LOG_LEVEL=info
 LOG_LEVEL=warn
 LOG_LEVEL=error
 ```
+
+***
 
 ### Running as a service
 
@@ -283,6 +307,8 @@ now reboot the pi
 sudo reboot now
 ```
 
+***
+
 #### Using Most-Explorer
 
 I have created a visual tool to help with exploring the Most Bus. Binaries can be downloaded from here:
@@ -297,6 +323,8 @@ node server.js
 ```
 
 Then on the computer that has most-explorer installed, launch the app, after a few seconds it should find the socketmost server and you should see messages coming in.
+
+***
 
 ### Events
 
@@ -322,6 +350,8 @@ The events that the PiMost emits all follow the same json structure
 ```
 
 Possible events and their structures are below
+
+***
 
 ##### newMessage
 ```javascript
