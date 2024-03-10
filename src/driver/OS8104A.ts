@@ -72,7 +72,7 @@ export class OS8104A extends EventEmitter {
     // TODO this had an unnoticed type error for debounce, now TS has saved the day, it may mess things up
     // now that it's actually working
     this.fault = new Gpio(gpiConfig.fault, 'in', 'both', {
-      debounceTimeout: 1,
+      debounceTimeout: 3,
     })
     this.status = new Gpio(gpiConfig.status, 'in', 'both', {
       debounceTimeout: 1,
@@ -122,19 +122,29 @@ export class OS8104A extends EventEmitter {
         throw err
       }
       if (val === 1) {
-        console.log('status lost')
-        this.writeReg(Registers.REG_bXCR, [
-          this.readSingleReg(Registers.REG_bXCR) &
-            ~Registers.bXCR_OUTPUT_ENABLE,
-        ])
+        this.logger.warn('MOST signal detected as off')
+        this.switchOffOutput()
         //this.startUp()
       } else {
         this.logger.info('most status up')
-        this.writeReg(Registers.REG_bXCR, [
-          this.readSingleReg(Registers.REG_bXCR) | Registers.bXCR_OUTPUT_ENABLE,
-        ])
+        this.switchOnOutput()
       }
     })
+  }
+
+  switchOffOutput() {
+    this.logger.info('switch off output emitter')
+    this.writeReg(Registers.REG_bXCR, [
+      this.readSingleReg(Registers.REG_bXCR) & ~Registers.bXCR_OUTPUT_ENABLE,
+    ])
+  }
+
+  switchOnOutput() {
+    this.logger.info('switching on output')
+    this.logger.info('most status up')
+    this.writeReg(Registers.REG_bXCR, [
+      this.readSingleReg(Registers.REG_bXCR) | Registers.bXCR_OUTPUT_ENABLE,
+    ])
   }
 
   startUp(): void {
@@ -143,7 +153,7 @@ export class OS8104A extends EventEmitter {
     this.logger.debug('writing reset')
     this.reset.writeSync(0)
     this.logger.debug('waiting reset')
-    this.wait(200)
+    this.wait(0)
       .then(() => {
         this.logger.debug('stopping reset')
         this.reset.writeSync(1)
@@ -151,6 +161,8 @@ export class OS8104A extends EventEmitter {
           if (e) {
             this.logger.error(`error setting interrupt watch`)
           }
+          this.writeReg(0x82, [0x10])
+          this.logger.debug('SCK configured')
           this.logger.info('initial reset complete carrying out init')
           this.resetOs8104()
         })
@@ -168,13 +180,20 @@ export class OS8104A extends EventEmitter {
 
   runConfig(): void {
     this.logger.info('running config')
+    this.logger.info(
+      `current network status is ${
+        this.mostStatus.readSync() ? 'down' : 'up'
+      } setting output suitably`,
+    )
+    const lockStatusPin = this.readReg(0x80).readUInt8(0) & 32 ? 0 : 1
+    this.logger.info(`pin mode status: ${lockStatusPin}`)
     for (const entry of this.getRegisterConfig(
       {
         nodeAddressLow: this.nodeAddressBuf[1],
         nodeAddressHigh: this.nodeAddressBuf[0],
         groupAddress: this.groupAddressBuf[0],
       },
-      Mode.leg,
+      lockStatusPin,
       this.mostStatus.readSync(),
     )) {
       this.logger.debug(
@@ -184,9 +203,15 @@ export class OS8104A extends EventEmitter {
       )
       this.writeReg(entry[0], [entry[1]])
     }
+    const mode = this.readReg(0x80).readUInt8() & 32 ? 'Legacy' : 'Enhanced'
+    this.logger.info(`running in ${mode} mode`)
+    this.logger.info(`register bXCR ${this.readReg(0x80).toString()}`)
     this.interrupt.watch(() => {
       this.logger.silly('interrupt active')
       this.interruptHandler()
+    })
+    this.wait(10).then(() => {
+      this.checkForLock()
     })
   }
 

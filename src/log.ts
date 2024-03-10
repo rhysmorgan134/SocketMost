@@ -13,12 +13,12 @@ winston.loggers.add('driverLogger', {
     winston.format.cli(),
     winston.format.metadata(),
     winston.format.errors({ stack: true }),
-    winston.format.timestamp(),
+    winston.format.timestamp({ format: 'hh:mm:ss.SSS' }),
     winston.format.printf(info => {
-      const out = `${info.level}:${info.message} ${colorizer.colorize(
+      const out = `${info.timestamp} - ${colorizer.colorize(
         'driver',
         info.metadata.service,
-      )}`
+      )}-${info.level}:${info.message} `
       return out
     }),
   ),
@@ -35,12 +35,12 @@ winston.loggers.add('socketMostLogger', {
     winston.format.cli(),
     winston.format.metadata(),
     winston.format.errors({ stack: true }),
-    winston.format.timestamp(),
+    winston.format.timestamp({ format: 'hh:mm:ss.SSS' }),
     winston.format.printf(info => {
-      const out = `${info.level}:${info.message} ${colorizer.colorize(
+      const out = `${info.timestamp} - ${colorizer.colorize(
         'socket',
         info.metadata.service,
-      )}`
+      )}-${info.level}:${info.message} `
       return out
     }),
   ),
