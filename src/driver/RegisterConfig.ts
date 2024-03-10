@@ -25,12 +25,13 @@ export function getRegisterConfig(
     mode === 1 ? reg.bCM1_CRYSTAL_DIVIDER_384F : reg.bCM1_CRYSTAL_DIVIDER_256F
   const bypass: reg.bXCR_ENHANCED_BYPASS | reg.bXCR_LEGACY_BYPASS =
     mode === 1 ? reg.bXCR_ENHANCED_BYPASS : reg.bXCR_LEGACY_BYPASS
+  const output = status ? 0 : reg.bXCR_OUTPUT_ENABLE
 
   // SCK as output
   // config.set(reg.REG_bSDC1, reg.bSDC1_SCK_OUTPUT)
 
   // //Clear power on int
-  // config.set(reg.REG_bMSGC, reg.bMSGC_RESET_ERR_INT)
+  config.set(reg.REG_bMSGC, reg.bMSGC_RESET_ERR_INT)
 
   // Node address high
   config.set(reg.REG_bNAH, nodeAddressHigh)
@@ -67,9 +68,7 @@ export function getRegisterConfig(
       bypass |
       reg.bXCR_ALL_BYPASS_DIS |
       reg.bXCR_REN_DIS |
-      status
-      ? 0
-      : reg.bXCR_OUTPUT_ENABLE,
+      output,
   )
 
   // Source Data control
@@ -105,6 +104,8 @@ export function getRegisterConfig(
       reg.bMSGC_RESET_ERR_INT |
       reg.bMSGC_RESET_NET_CONF_CHANGE,
   )
+
+  config.set(reg.REG_bXSR, reg.bXSR_CODING_ERR_MASK | reg.bXSR_SPDIF_ERR_MASK)
 
   return config
 }
