@@ -5,6 +5,7 @@ export function getRegisterConfig(
   { nodeAddressLow, nodeAddressHigh, groupAddress }: Config,
   mode: Mode,
   status: number,
+  master: boolean = false,
 ): Map<reg, number> {
   console.log(
     `addressLow: 0x${nodeAddressLow.toString(
@@ -18,14 +19,21 @@ export function getRegisterConfig(
   // Testing for 44.1khz, this is untested and just configured as per datasheet, if running at 44.1khz then the crystal is not compatible, so the chip has to be started up in legacy mode
   // and the locking source needs to be set to the RX network.
   const lockingSource: reg.bCM1_PLL_INPUT_CRYSTAL | reg.bCM1_PLL_INPUT_MOST =
-    mode === 1 ? reg.bCM1_PLL_INPUT_CRYSTAL : reg.bCM1_PLL_INPUT_MOST
+    reg.bCM1_PLL_INPUT_CRYSTAL
+  //mode === 1 ? reg.bCM1_PLL_INPUT_CRYSTAL : reg.bCM1_PLL_INPUT_MOST
   const crystalDivider:
     | reg.bCM1_CRYSTAL_DIVIDER_384F
-    | reg.bCM1_CRYSTAL_DIVIDER_256F =
-    mode === 1 ? reg.bCM1_CRYSTAL_DIVIDER_384F : reg.bCM1_CRYSTAL_DIVIDER_256F
+    | reg.bCM1_CRYSTAL_DIVIDER_256F = reg.bCM1_CRYSTAL_DIVIDER_384F
+  //mode === 1 ? reg.bCM1_CRYSTAL_DIVIDER_384F : reg.bCM1_CRYSTAL_DIVIDER_256F
   const bypass: reg.bXCR_ENHANCED_BYPASS | reg.bXCR_LEGACY_BYPASS =
-    mode === 1 ? reg.bXCR_ENHANCED_BYPASS : reg.bXCR_LEGACY_BYPASS
-  const output = status ? 0 : reg.bXCR_OUTPUT_ENABLE
+    reg.bXCR_LEGACY_BYPASS
+  //mode === 1 ? reg.bXCR_ENHANCED_BYPASS : reg.bXCR_LEGACY_BYPASS
+  const output = master
+    ? reg.bXCR_OUTPUT_ENABLE
+    : status
+    ? 0
+    : reg.bXCR_OUTPUT_ENABLE
+  const slave = master ? reg.bXCR_MASTER : reg.bXCR_SLAVE
 
   // SCK as output
   // config.set(reg.REG_bSDC1, reg.bSDC1_SCK_OUTPUT)
@@ -43,15 +51,20 @@ export function getRegisterConfig(
   config.set(reg.REG_bGA, groupAddress)
 
   // Clock Manager
-  config.set(reg.REG_bCM1, reg.bCM1_PLL_ENABLE | lockingSource | crystalDivider)
+  if (!master) {
+    config.set(
+      reg.REG_bCM1,
+      reg.bCM1_PLL_ENABLE | lockingSource | crystalDivider,
+    )
+  }
 
-  if (mode === 0) {
+  if (mode > 3) {
     config.set(
       reg.REG_bSDC3,
       reg.bSDC3_MUTE_SOURCE_PORTS | reg.bSDC3_SOURCE_PORT_DIS,
     )
   }
-  if (mode === 0) {
+  if (mode > 3) {
     config.set(
       reg.REG_bCM3,
       reg.bCM3_FREN_DIS |
@@ -64,12 +77,15 @@ export function getRegisterConfig(
   // Transmitter control
   config.set(
     reg.REG_bXCR,
-    reg.bXCR_SLAVE |
-      bypass |
-      reg.bXCR_ALL_BYPASS_DIS |
-      reg.bXCR_REN_DIS |
-      output,
+    slave | bypass | reg.bXCR_ALL_BYPASS_DIS | reg.bXCR_REN_DIS | output,
   )
+
+  if (master) {
+    config.set(
+      reg.REG_bCM1,
+      reg.bCM1_PLL_ENABLE | lockingSource | crystalDivider,
+    )
+  }
 
   // Source Data control
   config.set(
@@ -104,8 +120,6 @@ export function getRegisterConfig(
       reg.bMSGC_RESET_ERR_INT |
       reg.bMSGC_RESET_NET_CONF_CHANGE,
   )
-
-  config.set(reg.REG_bXSR, reg.bXSR_CODING_ERR_MASK | reg.bXSR_SPDIF_ERR_MASK)
 
   return config
 }

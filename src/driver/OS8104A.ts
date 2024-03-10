@@ -60,19 +60,20 @@ export class OS8104A extends EventEmitter {
   multiPartMessage?: TargetMostMessage<number[]>
   multiPartSequence: number
   transceiverLocked: boolean
+  master: boolean
 
   constructor(nodeAddress: number, groupAddress: number, freq: number) {
     super()
     this.logger = winston.loggers.get('driverLogger')
     this.spi = spi.openSync(0, 0, options)
-
+    this.master = true
     const gpiConfig = getPiGpioConfig()
     this.logger.info('GPIO config: ' + JSON.stringify(gpiConfig))
     this.interrupt = new Gpio(gpiConfig.interrupt, 'in', 'falling')
     // TODO this had an unnoticed type error for debounce, now TS has saved the day, it may mess things up
     // now that it's actually working
     this.fault = new Gpio(gpiConfig.fault, 'in', 'both', {
-      debounceTimeout: 3,
+      debounceTimeout: 0,
     })
     this.status = new Gpio(gpiConfig.status, 'in', 'both', {
       debounceTimeout: 1,
@@ -121,13 +122,15 @@ export class OS8104A extends EventEmitter {
         this.logger.error('error setting most status interrupt: ' + err)
         throw err
       }
-      if (val === 1) {
-        this.logger.warn('MOST signal detected as off')
-        this.switchOffOutput()
-        //this.startUp()
-      } else {
-        this.logger.info('most status up')
-        this.switchOnOutput()
+      if (!this.master) {
+        if (val === 1) {
+          this.logger.warn('MOST signal detected as off')
+          this.switchOffOutput()
+          //this.startUp()
+        } else {
+          this.logger.info('most status up')
+          this.switchOnOutput()
+        }
       }
     })
   }
@@ -195,6 +198,7 @@ export class OS8104A extends EventEmitter {
       },
       lockStatusPin,
       this.mostStatus.readSync(),
+      true,
     )) {
       this.logger.debug(
         `writing registry: ${entry[0].toString(
@@ -202,6 +206,13 @@ export class OS8104A extends EventEmitter {
         )} with value: ${entry[1].toString(16)}`,
       )
       this.writeReg(entry[0], [entry[1]])
+      this.logger.debug(
+        `register: ${entry[0].toString(16)} has value of: ${this.readReg(
+          entry[0],
+        )
+          .readUInt8(0)
+          .toString(16)}`,
+      )
     }
     const mode = this.readReg(0x80).readUInt8() & 32 ? 'Legacy' : 'Enhanced'
     this.logger.info(`running in ${mode} mode`)
@@ -402,7 +413,8 @@ export class OS8104A extends EventEmitter {
     if ((data & Registers.bXSR_TRANS_LOCK_ACT) > 0) {
       if (
         (masks & Registers.bXSR_LOCK_ERR_MASK) === 0 &&
-        this.transceiverLocked
+        this.transceiverLocked &&
+        !this.master
       ) {
         this.logger.warn('transceiver unlocked')
         this.transceiverLocked = false
