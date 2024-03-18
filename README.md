@@ -76,20 +76,6 @@ alternate-sample-rate = 48000
 default-sample-channels = 2
 default-channel-map = front-left,front-right
 
-#Save the file then proceed
-
-arecord -l
-
-#Take not of the card and device number. !!!
-#If using bookworm, switch audio to use pulse audio via raspi-config !!!
-
-sudo nano /etc/pulse/default.pa
-
-#add the below to the end of the file replace the c and d with you card and device number from above
-
-load-module module-alsa-source device=hw:c,d
-.ifexists module-udev-detect.so
-
 ```
 
 ***
@@ -120,7 +106,11 @@ both the USB-C power PiMost and also the 12v supply PiMost. Follow the relevant 
 Now we can set up the boot config options
 
 ```shell
-sudo nano /boot/config.txt
+#bookworm
+sudo nano /boot/firmware/config.txt
+
+#pre bookworm
+sudo nano /boot/config
 ```
 
 Uncomment these two lines:
@@ -152,6 +142,31 @@ dtoverlay=gpio-shutdown,gpio_pin=26,active_low=0,debounce=2000
 This has changed, the status signal is also used within the driver, so creates an access error, it's recommended to implement within the driver by executing a shutdown command
 
 ***
+
+### Microphone set up
+#### If using bookworm, switch audio to use pulse audio via raspi-config !!!
+```shell
+sudo raspi-config
+advanced settings > audio > 
+```
+
+
+```shell
+#Reboot the pi
+
+arecord -l
+
+#Take not of the card and device number. !!!
+
+
+sudo nano /etc/pulse/default.pa
+
+#add the below to the end of the file replace the c and d with you card and device number from above
+
+load-module module-alsa-source device=hw:c,d
+.ifexists module-udev-detect.so
+```
+reboot once again
 
 ### Software install
 
