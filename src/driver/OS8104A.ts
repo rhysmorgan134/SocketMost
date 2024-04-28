@@ -1,9 +1,11 @@
 import { Gpio } from 'onoff'
-import spi, { type SpiDevice, type SpiOptions } from 'spi-device'
+import { type SpiDevice, type SpiOptions } from 'spi-device'
 import EventEmitter from 'events'
 import { getRegisterConfig } from './RegisterConfig'
 import winston from 'winston'
 import { Registers } from './Registers'
+
+import os from 'os'
 import {
   AllocResult,
   AllocSourceResult,
@@ -20,7 +22,11 @@ import {
 import { getPiGpioConfig } from './GpioConfig'
 
 const TRANSFER_SPEED = 180000
-
+// @ts-ignore
+let spi = null
+if (os.type() === 'Linux') {
+  spi = require('spi-device')
+}
 const options: SpiOptions = {
   chipSelectHigh: false,
   bitsPerWord: 8,
@@ -64,6 +70,7 @@ export class OS8104A extends EventEmitter {
   constructor(nodeAddress: number, groupAddress: number, freq: number) {
     super()
     this.logger = winston.loggers.get('driverLogger')
+    // @ts-ignore
     this.spi = spi.openSync(0, 0, options)
 
     const gpiConfig = getPiGpioConfig()
