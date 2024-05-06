@@ -143,6 +143,7 @@ export enum Os8104Events {
   MasterFoundEvent = 'masterFound',
   SocketMostMessageRxEvent = 'newMessage',
   DeallocResult = 'deallocResult',
+  UsbConfig = 'usbConfig',
 }
 
 export enum SocketTypes {
@@ -164,4 +165,21 @@ export enum SocketTypes {
 export enum Mode {
   leg = 0,
   enh = 1,
+}
+
+export type Device = {
+  addrHigh: number
+  addrLow: number
+  fBlockId: number
+  instanceId: number
+  interfaceNo: number
+}
+
+export type UsbConfig = {
+  configSet: boolean
+  addrHigh: number
+  addrLow: number
+  group: number
+  amp: Device
+  mic: Device
 }

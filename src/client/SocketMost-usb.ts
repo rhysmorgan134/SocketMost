@@ -1,4 +1,8 @@
-import { PacketLengthParser, SerialPort } from 'serialport'
+import {
+  InterByteTimeoutParser,
+  PacketLengthParser,
+  SerialPort,
+} from 'serialport'
 import EventEmitter from 'events'
 import {
   AllocResult,
@@ -6,13 +10,14 @@ import {
   MostRxMessage,
   Os8104Events,
   SocketMostSendMessage,
+  UsbConfig,
 } from '../modules/Messages'
 
 export class SocketMostUsb extends EventEmitter {
   portFound: boolean
   portInterval: NodeJS.Timeout
   port?: SerialPort
-  parser?: PacketLengthParser
+  parser?: PacketLengthParser | InterByteTimeoutParser
   constructor() {
     super()
     this.portFound = false
@@ -24,7 +29,6 @@ export class SocketMostUsb extends EventEmitter {
 
   findPort() {
     SerialPort.list().then(ports => {
-      console.log(ports)
       ports.forEach(port => {
         if (port.manufacturer == 'ModernDayMods') {
           if (!this.portFound) {
@@ -39,6 +43,13 @@ export class SocketMostUsb extends EventEmitter {
 
             this.port.on('open', () => {
               this.emit('opened')
+            })
+
+            this.port.on('close', () => {
+              this.portFound = false
+              this.portInterval = setInterval(() => {
+                this.findPort()
+              }, 1000)
             })
 
             this.port.on('error', err => {
@@ -59,10 +70,17 @@ export class SocketMostUsb extends EventEmitter {
               }),
             )
 
-            //this.parser = this.port.pipe(new InterByteTimeoutParser({interval: 1}))
+            // this.parser = this.port.pipe(
+            //   new InterByteTimeoutParser({ interval: 1 }),
+            // )
             this.parser.on('data', data => {
               this.parseData(data)
             })
+
+            setTimeout(() => {
+              // this.sendConfigRequest()
+              this.sendConnectMic()
+            }, 3000)
 
             this.portFound = true
             this.sendCheckForLock()
@@ -81,11 +99,29 @@ export class SocketMostUsb extends EventEmitter {
     this.port!.write(buf)
   }
 
+  sendConfigRequest() {
+    const buf = Buffer.alloc(4)
+    buf.writeUInt32LE(0x55, 0)
+    buf.writeUint8(1, 1)
+    buf.writeUint8(111, 2)
+    console.log('sending config request', buf)
+    this.port!.write(buf)
+  }
+
   sendDellocateRequest() {
     const buf = Buffer.alloc(4)
     buf.writeUInt32LE(0x55, 0)
     buf.writeUint8(1, 1)
     buf.writeUint8(110, 2)
+    console.log('sending', buf)
+    this.port!.write(buf)
+  }
+
+  sendConnectMic() {
+    const buf = Buffer.alloc(4)
+    buf.writeUInt32LE(0x55, 0)
+    buf.writeUint8(1, 1)
+    buf.writeUint8(112, 2)
     console.log('sending', buf)
     this.port!.write(buf)
   }
@@ -121,7 +157,7 @@ export class SocketMostUsb extends EventEmitter {
     const len = data.readUInt8(1)
     const type = data.readUInt8(2)
     const buf = data.subarray(3)
-    console.log(buf)
+    console.log(data)
     switch (type) {
       case 1:
         this.emit(
@@ -156,9 +192,38 @@ export class SocketMostUsb extends EventEmitter {
       case 8:
         console.log('node position', data)
         break
+      case 9:
+        console.log('config request', data)
+        this.emit(Os8104Events.UsbConfig, this.parseConfig(buf))
+        break
       default:
         console.log('none found: ', data)
     }
+  }
+
+  parseConfig = (message: Buffer) => {
+    const data: UsbConfig = {
+      configSet: message.readUint8(0) ? true : false,
+      addrHigh: message.readUint8(1),
+      addrLow: message.readUint8(2),
+      group: message.readUint8(3),
+      amp: {
+        addrHigh: message.readUint8(4),
+        addrLow: message.readUInt8(5),
+        fBlockId: message.readUInt8(6),
+        instanceId: message.readUInt8(7),
+        interfaceNo: message.readUInt8(8),
+      },
+      mic: {
+        addrHigh: message.readUint8(8),
+        addrLow: message.readUInt8(9),
+        fBlockId: message.readUInt8(10),
+        instanceId: message.readUInt8(11),
+        interfaceNo: message.readUInt8(12),
+      },
+    }
+    console.log(data)
+    return data
   }
 
   parseMostMessage = (message: Buffer) => {
