@@ -10,6 +10,7 @@ import {
   MostRxMessage,
   Os8104Events,
   SocketMostSendMessage,
+  TargetMostMessage,
   UsbConfig,
 } from '../modules/Messages'
 
@@ -18,10 +19,12 @@ export class SocketMostUsb extends EventEmitter {
   portInterval: NodeJS.Timeout
   port?: SerialPort
   parser?: PacketLengthParser | InterByteTimeoutParser
+  multiPartMessage?: TargetMostMessage<number[]>
+  multiPartSequence: number
   constructor() {
     super()
     this.portFound = false
-
+    this.multiPartSequence = 0
     this.portInterval = setInterval(() => {
       this.findPort()
     }, 1000)
@@ -135,21 +138,73 @@ export class SocketMostUsb extends EventEmitter {
     this.port!.write(buf)
   }
 
-  sendControlMessage = (message: SocketMostSendMessage) => {
-    const buf = Buffer.alloc(24)
-    buf.writeUint8(0x55, 0)
-    buf.writeUint8(20, 1)
-    buf.writeUint8(100, 2)
-    buf.writeUint8(message.targetAddressHigh, 3)
-    buf.writeUint8(message.targetAddressLow, 4)
-    buf.writeUint8(message.fBlockID, 5)
-    buf.writeUint8(message.instanceID, 6)
-    buf.writeUint16LE(message.fktID, 7)
-    buf.writeUint8(message.opType, 9)
-    buf.writeUint8(message.data.length, 10)
-    const data = Buffer.from(message.data)
-    data.copy(buf, 11, 0)
+  sendShutDown() {
+    const buf = Buffer.alloc(4)
+    buf.writeUInt8(0x55, 0)
+    buf.writeUint8(1, 1)
+    buf.writeUint8(113, 2)
+    console.log('sending lock check', buf)
     this.port!.write(buf)
+  }
+
+  sendControlMessage = (message: SocketMostSendMessage, telId = 0) => {
+    if (message.data.length > 12) {
+      console.log('send multiplart message request')
+      this.multiPartSequence = 0
+      this.multiPartMessage = {
+        targetAddressHigh: message.targetAddressHigh,
+        targetAddressLow: message.targetAddressLow,
+        fBlockID: message.fBlockID,
+        instanceID: message.instanceID,
+        fktID: message.fktID,
+        opType: message.opType,
+        data: [...message.data],
+      }
+      this.sendMultiPartMessage()
+    } else {
+      const buf = Buffer.alloc(25)
+      buf.writeUint8(0x55, 0)
+      buf.writeUint8(20, 1)
+      buf.writeUint8(100, 2)
+      buf.writeUint8(message.targetAddressHigh, 3)
+      buf.writeUint8(message.targetAddressLow, 4)
+      buf.writeUint8(message.fBlockID, 5)
+      buf.writeUint8(message.instanceID, 6)
+      buf.writeUint16LE(message.fktID, 7)
+      buf.writeUint8(message.opType, 9)
+      buf.writeUint8(message.data.length, 10)
+      buf.writeUint8(telId, 11)
+      const data = Buffer.from(message.data)
+      data.copy(buf, 12, 0)
+      this.port!.write(buf)
+    }
+  }
+
+  sendMultiPartMessage() {
+    const tempMessage = { ...this.multiPartMessage! }
+    this.multiPartMessage!.data.length > 11
+      ? (tempMessage.data = this.multiPartMessage!.data.splice(0, 11))
+      : (tempMessage.data = this.multiPartMessage!.data)
+    console.log('spliced data is: ', tempMessage.data)
+    console.log('remaining data is: ', this.multiPartMessage?.data)
+    tempMessage.data = [this.multiPartSequence, ...tempMessage.data]
+    let telId
+    // In a multipart message telId represents the beginning, middle and end of the message, telId = 1 means first message, telId = 2 means message continuing
+    // telId = 3 means final message
+    if (this.multiPartSequence === 0) {
+      telId = 1
+    } else if (tempMessage.data.length < 11) {
+      telId = 3
+    } else {
+      telId = 2
+    }
+    this.sendControlMessage(tempMessage, telId)
+    if (telId !== 3) {
+      this.once('messageSent', () => {
+        this.multiPartSequence += 1
+        this.sendMultiPartMessage()
+      })
+    }
   }
 
   parseData = (data: Buffer) => {
@@ -195,6 +250,10 @@ export class SocketMostUsb extends EventEmitter {
       case 9:
         console.log('config request', data)
         this.emit(Os8104Events.UsbConfig, this.parseConfig(buf))
+        break
+      case 10:
+        console.log('shutdown request', data)
+        this.sendShutDown()
         break
       default:
         console.log('none found: ', data)
