@@ -180,7 +180,7 @@ followed by
 
 `cd examples`
 
-`LOG_LEVEL_DEBUG node server.js`
+`LOG_LEVEL=denug node server.js`
 
 You should see a bunch of messages out on the console. An example of a healthy start up is below 
 
