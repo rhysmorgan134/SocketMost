@@ -1,4 +1,4 @@
-# There is currently an issue with the latest version of raspberry OS and i2s audio. If you wish to use i2s audio please stay with this version of raspberry os https://automotive-pis.slack.com/archives/D06607LSFU7/p1710797315634059
+# There is currently an issue with the latest version of raspberry OS and i2s audio. If you wish to use i2s audio please stay with this version of raspberry os https://downloads.raspberrypi.com/raspios_oldstable_full_arm64/images/raspios_oldstable_full_arm64-2024-03-12/
 
 ## SocketMost for use with [PiMost](https://shop.moderndaymods.com/products/pimost-hat-usb-c-power-most25-only)
 
