@@ -178,4 +178,9 @@ export class SocketMostClient extends EventEmitter {
       JSON.stringify({ eventType: SocketTypes.DisconnectSource, ...data }),
     )
   }
+
+  //TODO
+  getAddress() {
+    return { nodeAddressHigh: 0x00, nodeAddressLow: 0x00 }
+  }
 }

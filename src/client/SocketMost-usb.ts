@@ -12,7 +12,9 @@ import {
   SocketMostSendMessage,
   TargetMostMessage,
   UsbConfig,
+  UsbSettings,
 } from '../modules/Messages'
+const { exec } = require('child_process')
 
 export class SocketMostUsb extends EventEmitter {
   portFound: boolean
@@ -21,13 +23,46 @@ export class SocketMostUsb extends EventEmitter {
   parser?: PacketLengthParser | InterByteTimeoutParser
   multiPartMessage?: TargetMostMessage<number[]>
   multiPartSequence: number
+  position: number
+  sendInProg: boolean
+  sendBuffer: Buffer[]
+  sendTimeout?: NodeJS.Timeout
+  locked: boolean
+  settings?: UsbSettings
   constructor() {
     super()
     this.portFound = false
     this.multiPartSequence = 0
+    this.position = 0
+    this.sendInProg = false
+    this.sendBuffer = []
+    this.locked = false
     this.portInterval = setInterval(() => {
       this.findPort()
     }, 1000)
+    this.on('messageSent', data => {
+      if (this.sendBuffer.length > 0) {
+        console.log('buffered amount pre: ', this.sendBuffer.length)
+        const buf = this.sendBuffer.shift()
+        console.log('buffered amount post: ', this.sendBuffer.length)
+        this.port!.write(buf)
+        if (this.sendBuffer.length === 0) {
+          this.sendInProg = false
+        }
+        if (this.sendTimeout) {
+          clearTimeout(this.sendTimeout)
+          this.sendTimeout = setTimeout(() => {
+            this.emit(Os8104Events.MessageSent, 0xff)
+          }, 150)
+        } else {
+          this.sendTimeout = setTimeout(() => {
+            this.emit(Os8104Events.MessageSent, 0xff)
+          }, 150)
+        }
+      } else {
+        this.sendInProg = false
+      }
+    })
   }
 
   findPort() {
@@ -35,7 +70,7 @@ export class SocketMostUsb extends EventEmitter {
       ports.forEach(port => {
         if (port.manufacturer == 'ModernDayMods') {
           if (!this.portFound) {
-            console.log('found', port.manufacturer)
+            //console.log('found', port.manufacturer)
 
             clearInterval(this.portInterval)
             this.port = new SerialPort({
@@ -46,6 +81,7 @@ export class SocketMostUsb extends EventEmitter {
 
             this.port.on('open', () => {
               this.emit('opened')
+              this.getSettings()
             })
 
             this.port.on('close', () => {
@@ -56,8 +92,8 @@ export class SocketMostUsb extends EventEmitter {
             })
 
             this.port.on('error', err => {
-              this.emit('error')
               console.log(err)
+              this.emit('error')
               this.portInterval = setInterval(() => {
                 this.findPort()
                 this.portFound = false
@@ -98,7 +134,7 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUInt32LE(0x55, 0)
     buf.writeUint8(1, 1)
     buf.writeUint8(103, 2)
-    console.log('sending', buf)
+    //console.log('sending', buf)
     this.port!.write(buf)
   }
 
@@ -107,7 +143,7 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUInt32LE(0x55, 0)
     buf.writeUint8(1, 1)
     buf.writeUint8(111, 2)
-    console.log('sending config request', buf)
+    //console.log('sending config request', buf)
     this.port!.write(buf)
   }
 
@@ -116,7 +152,7 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUInt32LE(0x55, 0)
     buf.writeUint8(1, 1)
     buf.writeUint8(110, 2)
-    console.log('sending', buf)
+    //console.log('sending', buf)
     this.port!.write(buf)
   }
 
@@ -125,7 +161,7 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUInt32LE(0x55, 0)
     buf.writeUint8(1, 1)
     buf.writeUint8(112, 2)
-    console.log('sending', buf)
+    //console.log('sending', buf)
     this.port!.write(buf)
   }
 
@@ -134,7 +170,7 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUInt8(0x55, 0)
     buf.writeUint8(1, 1)
     buf.writeUint8(107, 2)
-    console.log('sending lock check', buf)
+    //console.log('sending lock check', buf)
     this.port!.write(buf)
   }
 
@@ -143,40 +179,54 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUInt8(0x55, 0)
     buf.writeUint8(1, 1)
     buf.writeUint8(113, 2)
-    console.log('sending lock check', buf)
+    console.log('sending shutdown Ack', buf)
     this.port!.write(buf)
+    setTimeout(() => {
+      exec('sudo shutdown now')
+    }, 500)
   }
 
   sendControlMessage = (message: SocketMostSendMessage, telId = 0) => {
-    if (message.data.length > 12) {
-      console.log('send multiplart message request')
-      this.multiPartSequence = 0
-      this.multiPartMessage = {
-        targetAddressHigh: message.targetAddressHigh,
-        targetAddressLow: message.targetAddressLow,
-        fBlockID: message.fBlockID,
-        instanceID: message.instanceID,
-        fktID: message.fktID,
-        opType: message.opType,
-        data: [...message.data],
+    if (this.locked) {
+      if (message.data.length > 12) {
+        //console.log('send multiplart message request')
+        this.multiPartSequence = 0
+        this.multiPartMessage = {
+          targetAddressHigh: message.targetAddressHigh,
+          targetAddressLow: message.targetAddressLow,
+          fBlockID: message.fBlockID,
+          instanceID: message.instanceID,
+          fktID: message.fktID,
+          opType: message.opType,
+          data: [...message.data],
+        }
+        this.sendMultiPartMessage()
+      } else {
+        const buf = Buffer.alloc(25)
+        buf.writeUint8(0x55, 0)
+        buf.writeUint8(20, 1)
+        buf.writeUint8(100, 2)
+        buf.writeUint8(message.targetAddressHigh, 3)
+        buf.writeUint8(message.targetAddressLow, 4)
+        buf.writeUint8(message.fBlockID, 5)
+        buf.writeUint8(message.instanceID, 6)
+        buf.writeUint16LE(message.fktID, 7)
+        buf.writeUint8(message.opType, 9)
+        buf.writeUint8(message.data.length, 10)
+        buf.writeUint8(telId, 11)
+        const data = Buffer.from(message.data)
+        data.copy(buf, 12, 0)
+        this.port!.write(buf)
+        // if (this.sendInProg) {
+        //   console.log('send overflow!!!! buffering....')
+        //   this.sendBuffer.push(buf)
+        // } else {
+        //   this.sendInProg = true
+        //   this.port!.write(buf)
+        // }
       }
-      this.sendMultiPartMessage()
     } else {
-      const buf = Buffer.alloc(25)
-      buf.writeUint8(0x55, 0)
-      buf.writeUint8(20, 1)
-      buf.writeUint8(100, 2)
-      buf.writeUint8(message.targetAddressHigh, 3)
-      buf.writeUint8(message.targetAddressLow, 4)
-      buf.writeUint8(message.fBlockID, 5)
-      buf.writeUint8(message.instanceID, 6)
-      buf.writeUint16LE(message.fktID, 7)
-      buf.writeUint8(message.opType, 9)
-      buf.writeUint8(message.data.length, 10)
-      buf.writeUint8(telId, 11)
-      const data = Buffer.from(message.data)
-      data.copy(buf, 12, 0)
-      this.port!.write(buf)
+      this.emit(Os8104Events.MessageSent, Buffer.from([255]))
     }
   }
 
@@ -185,18 +235,24 @@ export class SocketMostUsb extends EventEmitter {
     this.multiPartMessage!.data.length > 11
       ? (tempMessage.data = this.multiPartMessage!.data.splice(0, 11))
       : (tempMessage.data = this.multiPartMessage!.data)
-    console.log('spliced data is: ', tempMessage.data)
-    console.log('remaining data is: ', this.multiPartMessage?.data)
+    //console.log('spliced data is: ', tempMessage.data)
+    //console.log('remaining data is: ', this.multiPartMessage?.data)
     tempMessage.data = [this.multiPartSequence, ...tempMessage.data]
     let telId
     // In a multipart message telId represents the beginning, middle and end of the message, telId = 1 means first message, telId = 2 means message continuing
     // telId = 3 means final message
     if (this.multiPartSequence === 0) {
       telId = 1
-    } else if (tempMessage.data.length < 11) {
+      //console.log('tel id: ', telId)
+      //console.log(tempMessage.data.length)
+    } else if (tempMessage.data.length <= 11) {
       telId = 3
+      //console.log('tel id: ', telId)
+      //console.log(tempMessage.data.length)
     } else {
       telId = 2
+      //console.log('tel id: ', telId)
+      //console.log(tempMessage.data.length)
     }
     this.sendControlMessage(tempMessage, telId)
     if (telId !== 3) {
@@ -208,11 +264,9 @@ export class SocketMostUsb extends EventEmitter {
   }
 
   parseData = (data: Buffer) => {
-    const header = data.readUInt8(0)
-    const len = data.readUInt8(1)
     const type = data.readUInt8(2)
     const buf = data.subarray(3)
-    console.log(data)
+    //console.log(data)
     switch (type) {
       case 1:
         this.emit(
@@ -221,68 +275,56 @@ export class SocketMostUsb extends EventEmitter {
         )
         break
       case 2:
-        console.log('shutdown')
+        //console.log('shutdown')
         this.emit(Os8104Events.Shutdown)
         break
       case 3:
-        console.log('alloc result', data)
+        //console.log('alloc result', data)
         this.emit(Os8104Events.AllocResult, this.parseAllocResponse(buf))
         break
       case 4:
-        console.log('message sent')
-        this.emit(Os8104Events.MessageSent)
+        //console.log('message sent')
+        this.emit(Os8104Events.MessageSent, buf)
         break
       case 5:
-        console.log('locked')
+        //console.log('locked')
         this.emit(Os8104Events.Locked)
+        this.locked = true
+        this.sendBuffer = []
+        this.sendInProg = false
+        setTimeout(() => {
+          this.getPosition()
+        }, 10)
         break
       case 6:
-        console.log('unlocked')
+        //console.log('unlocked')
+        this.locked = false
+        this.sendBuffer = []
+        this.sendInProg = false
         this.emit(Os8104Events.Unlocked)
         break
       case 7:
-        console.log('dealloc result')
+        //console.log('dealloc result')
         this.emit(Os8104Events.DeallocResult, this.parseDeallocResult(buf))
         break
       case 8:
-        console.log('node position', data)
+        //console.log('node position', data)
+        this.position = data.readUInt8(3)
+        this.emit(Os8104Events.PositionUpdate, data.readUInt8(3))
         break
       case 9:
-        console.log('config request', data)
-        this.emit(Os8104Events.UsbConfig, this.parseConfig(buf))
+        //console.log('config request', data)
         break
       case 10:
-        console.log('shutdown request', data)
+        //console.log('shutdown request', data)
         this.sendShutDown()
         break
+      case 11:
+        this.parseSettings(buf)
+        break
       default:
-        console.log('none found: ', data)
+      //console.log('none found: ', data)
     }
-  }
-
-  parseConfig = (message: Buffer) => {
-    const data: UsbConfig = {
-      configSet: message.readUint8(0) ? true : false,
-      addrHigh: message.readUint8(1),
-      addrLow: message.readUint8(2),
-      group: message.readUint8(3),
-      amp: {
-        addrHigh: message.readUint8(4),
-        addrLow: message.readUInt8(5),
-        fBlockId: message.readUInt8(6),
-        instanceId: message.readUInt8(7),
-        interfaceNo: message.readUInt8(8),
-      },
-      mic: {
-        addrHigh: message.readUint8(8),
-        addrLow: message.readUInt8(9),
-        fBlockId: message.readUInt8(10),
-        instanceId: message.readUInt8(11),
-        interfaceNo: message.readUInt8(12),
-      },
-    }
-    console.log(data)
-    return data
   }
 
   parseMostMessage = (message: Buffer) => {
@@ -301,8 +343,43 @@ export class SocketMostUsb extends EventEmitter {
           ? message.slice(8, message.length - 1)
           : message.slice(8),
     }
-    console.log(data)
+    //console.log(data)
     return data
+  }
+
+  parseSettings = (data: Buffer) => {
+    const settings: UsbSettings = {
+      version: data.slice(0, 5).toString(),
+      standalone: data.readUInt8(5) & 1 ? true : false,
+      autoShutdown: data.readUInt8(5) & 2 ? true : false,
+      customShutdown: data.readUInt8(5) & 4 ? true : false,
+      auxPower: data.readUInt8(5) & 8 ? true : false,
+      forty8Khz: data.readUInt8(5) & 16 ? true : false,
+      spare3: data.readUInt8(5) & 32 ? true : false,
+      spare4: data.readUInt8(5) & 64 ? true : false,
+      spare5: data.readUInt8(5) & 128 ? true : false,
+      nodeAddressHigh: data.readUInt8(6),
+      nodeAddressLow: data.readUInt8(7),
+      groupAddress: data.readUInt8(8),
+      shutdownTimeDelay: data.readUInt32LE(12),
+      startupTimeDelay: data.readUInt32LE(16),
+      customShutdownMessage: {
+        fblockId: data.readUInt8(20),
+        fktId: data.readUInt8(22),
+        optype: data.readUInt8(24),
+        data: Array.from(data.slice(25, 37)), //31
+      },
+      amplifier: {
+        fblockId: data.readUInt8(38),
+        targetAddressHigh: data.readUInt8(39),
+        targetAddressLow: data.readUInt8(40),
+        instanceId: data.readUInt8(41),
+        sinkNumber: data.readUInt8(42),
+      },
+    }
+    this.settings = settings
+    this.emit(Os8104Events.Settings, settings)
+    console.log('settings received!', settings)
   }
 
   parseAllocResponse = (data: Buffer): AllocResult => {
@@ -342,7 +419,7 @@ export class SocketMostUsb extends EventEmitter {
         result.answer1 = 'ERROR'
         result.freeChannels = 0
     }
-    console.log(result)
+    //console.log(result)
     return result
   }
 
@@ -376,7 +453,9 @@ export class SocketMostUsb extends EventEmitter {
     this.sendAllocateRequest()
   }
 
-  deallocate = () => {}
+  deallocate = () => {
+    this.sendDellocateRequest()
+  }
 
   stream = () => {}
 
@@ -385,4 +464,70 @@ export class SocketMostUsb extends EventEmitter {
   connectSource = () => {}
 
   disconnectSource = () => {}
+
+  bootToDFU = () => {
+    const buf = Buffer.alloc(3)
+    buf.writeUInt8(0x55, 0)
+    buf.writeUint8(1, 1)
+    buf.writeUint8(99, 2)
+  }
+
+  getPosition = () => {
+    const buf = Buffer.alloc(4)
+    buf.writeUInt8(0x55, 0)
+    buf.writeUint8(1, 1)
+    buf.writeUint8(101, 2)
+    //console.log('sending position request', buf)
+    this.port!.write(buf)
+  }
+
+  getSettings = () => {
+    const buf = Buffer.alloc(4)
+    buf.writeUInt8(0x55, 0)
+    buf.writeUint8(1, 1)
+    buf.writeUint8(115, 2)
+    //console.log('sending position request', buf)
+    this.port!.write(buf)
+  }
+
+  getAddress = () => {
+    return {
+      nodeAddressHigh: this.settings?.nodeAddressHigh,
+      nodeAddressLow: this.settings?.nodeAddressLow,
+    }
+  }
+
+  saveSettings = (settings: UsbSettings) => {
+    let bitField = 0
+    bitField |= (settings.standalone ? 1 : 0) << 0
+    bitField |= (settings.autoShutdown ? 1 : 0) << 1
+    bitField |= (settings.customShutdown ? 1 : 0) << 2
+    bitField |= (settings.auxPower ? 1 : 0) << 3
+    bitField |= (settings.forty8Khz ? 1 : 0) << 4
+    const buf = Buffer.alloc(46)
+    buf.writeUInt8(0x55, 0)
+    buf.writeUint8(40, 1)
+    buf.writeUint8(114, 2)
+    const version = Buffer.from(settings.version)
+    version.copy(buf, 3, 0, 5)
+    buf.writeUint8(bitField, 8)
+    buf.writeUint8(settings.nodeAddressHigh, 9)
+    buf.writeUint8(settings.nodeAddressLow, 10)
+    buf.writeUint8(settings.groupAddress, 11)
+    buf.writeUInt32LE(settings.shutdownTimeDelay, 15)
+    buf.writeUInt32LE(settings.startupTimeDelay, 19)
+    buf.writeUint8(settings.customShutdownMessage.fblockId, 23)
+    buf.writeUint8(0xff, 24)
+    buf.writeUint16LE(settings.customShutdownMessage.fktId, 25)
+    buf.writeUint8(settings.customShutdownMessage.optype, 27)
+    buf.fill(Buffer.from(settings.customShutdownMessage.data), 28, 40)
+    buf.writeUint8(settings.amplifier.fblockId, 40)
+    buf.writeUint8(settings.amplifier.fblockId, 41)
+    buf.writeUint8(settings.amplifier.targetAddressHigh, 42)
+    buf.writeUint8(settings.amplifier.targetAddressLow, 43)
+    buf.writeUint8(settings.amplifier.instanceId, 44)
+    buf.writeUint8(settings.amplifier.sinkNumber, 45)
+    console.log(buf)
+    this.port!.write(buf)
+  }
 }

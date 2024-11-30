@@ -131,6 +131,40 @@ export type MessageOnly = {
     | SocketTypes.GetNodePosition
 }
 
+export type ShutdownMessage = {
+  fblockId: number
+  fktId: number
+  optype: number
+  data: number[]
+}
+
+export type Amplifier = {
+  fblockId: number
+  targetAddressHigh: number
+  targetAddressLow: number
+  instanceId: number
+  sinkNumber: number
+}
+
+export type UsbSettings = {
+  version: string
+  standalone: boolean
+  autoShutdown: boolean
+  customShutdown: boolean
+  auxPower: boolean
+  forty8Khz: boolean
+  spare3: boolean
+  spare4: boolean
+  spare5: boolean
+  nodeAddressHigh: number
+  nodeAddressLow: number
+  groupAddress: number
+  shutdownTimeDelay: number
+  startupTimeDelay: number
+  customShutdownMessage: ShutdownMessage
+  amplifier: Amplifier
+}
+
 export enum Os8104Events {
   MostMessageRx = 'newMessageRx',
   AllocResult = 'allocResult',
@@ -143,7 +177,7 @@ export enum Os8104Events {
   MasterFoundEvent = 'masterFound',
   SocketMostMessageRxEvent = 'newMessage',
   DeallocResult = 'deallocResult',
-  UsbConfig = 'usbConfig',
+  Settings = 'settings',
 }
 
 export enum SocketTypes {
@@ -175,6 +209,14 @@ export type Device = {
   interfaceNo: number
 }
 
+export type ModuleSingle = {
+  addrHigh: number
+  addrLow: number
+  fBlockId: number
+  instanceId: number
+  functions: number[]
+}
+
 export type UsbConfig = {
   configSet: boolean
   addrHigh: number
@@ -182,4 +224,30 @@ export type UsbConfig = {
   group: number
   amp: Device
   mic: Device
+}
+
+type PreDefinedAmplifers = { [key: string]: Amplifier }
+
+export const preDefinedAmplifiers: PreDefinedAmplifers = {
+  jlr: {
+    fblockId: 0x22,
+    targetAddressHigh: 0x01,
+    targetAddressLow: 0x86,
+    instanceId: 0x05,
+    sinkNumber: 0x01,
+  },
+  bmw: {
+    fblockId: 0x22,
+    targetAddressHigh: 0x01,
+    targetAddressLow: 0x01,
+    instanceId: 0x01,
+    sinkNumber: 0x02,
+  },
+  volvoP1: {
+    fblockId: 0x22,
+    targetAddressHigh: 0x1,
+    targetAddressLow: 0x6d,
+    instanceId: 0x01,
+    sinkNumber: 0x01,
+  },
 }
