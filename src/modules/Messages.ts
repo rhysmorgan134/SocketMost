@@ -163,6 +163,7 @@ export type UsbSettings = {
   startupTimeDelay: number
   customShutdownMessage: ShutdownMessage
   amplifier: Amplifier
+  microphone: Amplifier
 }
 
 export enum Os8104Events {
@@ -245,6 +246,30 @@ export const preDefinedAmplifiers: PreDefinedAmplifers = {
   },
   volvoP1: {
     fblockId: 0x22,
+    targetAddressHigh: 0x1,
+    targetAddressLow: 0x6d,
+    instanceId: 0x01,
+    sinkNumber: 0x01,
+  },
+}
+
+export const preDefinedMicrophones: PreDefinedAmplifers = {
+  jlr: {
+    fblockId: 0x26,
+    targetAddressHigh: 0x01,
+    targetAddressLow: 0x80,
+    instanceId: 0x01,
+    sinkNumber: 0x01,
+  },
+  bmw: {
+    fblockId: 0x26,
+    targetAddressHigh: 0x01,
+    targetAddressLow: 0x03,
+    instanceId: 0x00,
+    sinkNumber: 0x01,
+  },
+  volvoP1: {
+    fblockId: 0x26,
     targetAddressHigh: 0x1,
     targetAddressLow: 0x6d,
     instanceId: 0x01,

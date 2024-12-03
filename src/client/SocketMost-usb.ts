@@ -376,6 +376,13 @@ export class SocketMostUsb extends EventEmitter {
         instanceId: data.readUInt8(41),
         sinkNumber: data.readUInt8(42),
       },
+      microphone: {
+        fblockId: data.readUInt8(43),
+        targetAddressHigh: data.readUInt8(44),
+        targetAddressLow: data.readUInt8(45),
+        instanceId: data.readUInt8(46),
+        sinkNumber: data.readUInt8(47),
+      },
     }
     this.settings = settings
     this.emit(Os8104Events.Settings, settings)
@@ -527,6 +534,11 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUint8(settings.amplifier.targetAddressLow, 43)
     buf.writeUint8(settings.amplifier.instanceId, 44)
     buf.writeUint8(settings.amplifier.sinkNumber, 45)
+    buf.writeUint8(settings.amplifier.fblockId, 46)
+    buf.writeUint8(settings.amplifier.targetAddressHigh, 47)
+    buf.writeUint8(settings.amplifier.targetAddressLow, 48)
+    buf.writeUint8(settings.amplifier.instanceId, 49)
+    buf.writeUint8(settings.amplifier.sinkNumber, 50)
     console.log(buf)
     this.port!.write(buf)
   }
