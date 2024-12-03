@@ -219,9 +219,12 @@ export class OS8104A extends EventEmitter {
     this.logger.info(`register bXCR ${this.readReg(0x80).toString()}`)
     this.interrupt.watch(() => {
       this.logger.silly('interrupt active')
+      console.log('interrupt')
       this.interruptHandler()
     })
+
     this.wait(10).then(() => {
+      this.deallocateAll()
       this.checkForLock()
     })
   }
@@ -295,6 +298,7 @@ export class OS8104A extends EventEmitter {
   interruptHandler(): void {
     // Read interrupts
     const interrupts = this.readSingleReg(Registers.REG_bMSGS)
+    console.log('intterupt active')
     if ((interrupts & Registers.bMSGS_MESS_RECEIVED) > 0) {
       this.logger.debug(`message received`)
       this.parseMostMessage(this.readReg(0xa0, 20))
@@ -464,6 +468,7 @@ export class OS8104A extends EventEmitter {
       this.sendMultiPartMessage()
     } else {
       if (this.transceiverLocked) {
+        console.log('sending message', targetAddressLow)
         const header = Buffer.alloc(9)
         this.logger.silly(
           `sending targetAddressHigh: 0x${targetAddressHigh.toString(
@@ -596,6 +601,28 @@ export class OS8104A extends EventEmitter {
     }
   }
 
+  deallocateAll(): void {
+    this.logger.info('deallocating all')
+    const header = Buffer.alloc(7)
+    header.writeUInt8(0x01, 0)
+    header.writeUInt8(0x04, 1)
+    header.writeUInt8(0x04, 2)
+    header.writeUInt8(0x00, 3)
+    header.writeUInt8(0x00, 4)
+    header.writeUInt8(0x7f, 5)
+    header.writeUInt8(0x00, 6)
+    this.writeReg(0xc0, [...header])
+    this.writeReg(Registers.REG_bMSGC, [
+      this.readSingleReg(Registers.REG_bMSGC) | Registers.bMSGC_START_TX,
+    ])
+    this.logger.debug('setting deallocate check')
+    this.awaitDealloc = true
+    this.deallocTimeout = setTimeout(() => {
+      this.awaitDealloc = false
+      this.logger.error('Allocate timeout')
+    }, 500)
+  }
+
   getRemoteSource(connectionLabel: number): void {
     this.logger.debug('running remote get source')
     const header = Buffer.alloc(7)
@@ -682,11 +709,13 @@ export class OS8104A extends EventEmitter {
   }
 
   clearMra() {
-    this.logger.info('clearing mra')
-    this.writeReg(this.allocResult!.loc1, [this.allocResult!.loc1])
-    this.writeReg(this.allocResult!.loc2, [this.allocResult!.loc2])
-    this.writeReg(this.allocResult!.loc3, [this.allocResult!.loc3])
-    this.writeReg(this.allocResult!.loc4, [this.allocResult!.loc4])
+    if (this.allocResult?.loc1) {
+      this.logger.info('clearing mra')
+      this.writeReg(this.allocResult!.loc1, [this.allocResult!.loc1])
+      this.writeReg(this.allocResult!.loc2, [this.allocResult!.loc2])
+      this.writeReg(this.allocResult!.loc3, [this.allocResult!.loc3])
+      this.writeReg(this.allocResult!.loc4, [this.allocResult!.loc4])
+    }
   }
 
   parseDeallocateResponse(data: Buffer): DeallocResult {
@@ -819,6 +848,11 @@ export class OS8104A extends EventEmitter {
     '2'?: number
     '3'?: number
   }): void {
+    this.allocSourceResult.byte0 = bytes['0']
+    this.allocSourceResult.byte1 = bytes['1']
+    this.allocSourceResult.byte2 = bytes['2']
+    this.allocSourceResult.byte3 = bytes['3']
+    this.setMrtSink1()
     console.log('retrieve audio in os8104', bytes)
   }
 
@@ -928,10 +962,19 @@ export class OS8104A extends EventEmitter {
     this.logger.debug('setting mrt')
     this.writeReg(0x46, [this.allocSourceResult.byte0])
     this.writeReg(0x56, [this.allocSourceResult.byte1])
-    this.writeReg(0x66, [this.allocSourceResult.byte0])
-    this.writeReg(0x76, [this.allocSourceResult.byte1])
+    this.writeReg(0x66, [this.allocSourceResult.byte2!])
+    this.writeReg(0x76, [this.allocSourceResult.byte3!])
     setTimeout(() => {
       this.writeReg(Registers.REG_bSDC3, [0x00])
+      this.writeReg(Registers.REG_bSDC1, [
+        this.readSingleReg(Registers.REG_bSDC1) | Registers.bSDC1_UNMUTE_SOURCE,
+      ])
+      console.log('sdc1: ' + this.readSingleReg(Registers.REG_bSDC1))
+      console.log('sdc3: ' + this.readSingleReg(Registers.REG_bSDC3))
+      console.log('0x46: ' + this.readSingleReg(0x46))
+      console.log('0x56: ' + this.readSingleReg(0x56))
+      console.log('0x66: ' + this.readSingleReg(0x66))
+      console.log('0x76: ' + this.readSingleReg(0x76))
     }, 100)
   }
 

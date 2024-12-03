@@ -95,7 +95,7 @@ export function getRegisterConfig(
       reg.bSDC1_POLARITY_FSY_FALLING |
       reg.bSDC1_NO_CYCLES_DEF |
       reg.bSDC1_SCK_OUTPUT |
-      reg.bSDC1_TRANSPARENT_DIS |
+      reg.bSDC1_TRANSPARENT_EN |
       reg.bSDC1_UNMUTE_SOURCE |
       reg.bSDC1_SPDIF_DIS,
   )
@@ -105,7 +105,7 @@ export function getRegisterConfig(
 
   // Transceiver Status
   config.set(reg.REG_bXSR, reg.bXSR_CODING_ERR_MASK | reg.bXSR_SPDIF_ERR_MASK)
-
+  config.set(0x96, 0x08)
   // Interrupt Enable
   config.set(
     reg.REG_bIE,

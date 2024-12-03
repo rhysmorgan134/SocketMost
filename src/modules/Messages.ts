@@ -72,6 +72,8 @@ export type Source = {
 export type AllocSourceResult = {
   byte0: number
   byte1: number
+  byte2?: number
+  byte3?: number
 }
 
 export type GetSource = {
