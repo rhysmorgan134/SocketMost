@@ -68,7 +68,7 @@ export class SocketMostUsb extends EventEmitter {
   findPort() {
     SerialPort.list().then(ports => {
       ports.forEach(port => {
-        if (port.manufacturer == 'ModernDayMods') {
+        if (port.productId == '4011') {
           if (!this.portFound) {
             //console.log('found', port.manufacturer)
 
@@ -377,11 +377,11 @@ export class SocketMostUsb extends EventEmitter {
         sinkNumber: data.readUInt8(42),
       },
       microphone: {
-        fblockId: data.readUInt8(43),
-        targetAddressHigh: data.readUInt8(44),
-        targetAddressLow: data.readUInt8(45),
-        instanceId: data.readUInt8(46),
-        sinkNumber: data.readUInt8(47),
+        fblockId: 0,
+        targetAddressHigh: 0,
+        targetAddressLow: 0,
+        instanceId: 0,
+        sinkNumber: 0,
       },
     }
     this.settings = settings
@@ -511,7 +511,7 @@ export class SocketMostUsb extends EventEmitter {
     bitField |= (settings.customShutdown ? 1 : 0) << 2
     bitField |= (settings.auxPower ? 1 : 0) << 3
     bitField |= (settings.forty8Khz ? 1 : 0) << 4
-    const buf = Buffer.alloc(46)
+    const buf = Buffer.alloc(51)
     buf.writeUInt8(0x55, 0)
     buf.writeUint8(40, 1)
     buf.writeUint8(114, 2)
@@ -534,11 +534,11 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUint8(settings.amplifier.targetAddressLow, 43)
     buf.writeUint8(settings.amplifier.instanceId, 44)
     buf.writeUint8(settings.amplifier.sinkNumber, 45)
-    buf.writeUint8(settings.amplifier.fblockId, 46)
-    buf.writeUint8(settings.amplifier.targetAddressHigh, 47)
-    buf.writeUint8(settings.amplifier.targetAddressLow, 48)
-    buf.writeUint8(settings.amplifier.instanceId, 49)
-    buf.writeUint8(settings.amplifier.sinkNumber, 50)
+    buf.writeUint8(settings.microphone.fblockId, 46)
+    buf.writeUint8(settings.microphone.targetAddressHigh, 47)
+    buf.writeUint8(settings.microphone.targetAddressLow, 48)
+    buf.writeUint8(settings.microphone.instanceId, 49)
+    buf.writeUint8(settings.microphone.sinkNumber, 50)
     console.log(buf)
     this.port!.write(buf)
   }
