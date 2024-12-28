@@ -15,11 +15,11 @@ export const getPiGpioConfig = (): GpioConfig => {
   const isPi5 = piCheckResult.stdout.toString().includes('Pi 5')
   return isPi5
     ? {
-        interrupt: 404,
-        fault: 405,
-        status: 415,
-        mostStatus: 425,
-        reset: 416,
+        interrupt: 576,
+        fault: 577,
+        status: 587,
+        mostStatus: 597,
+        reset: 588,
       }
     : { interrupt: 5, fault: 6, status: 16, mostStatus: 26, reset: 17 }
 }

@@ -21,10 +21,6 @@
 
                 r_cpu_dai: cpu {
                     sound-dai = <&i2s_clk_consumer>;
-
-                // TDM slot configuration for stereo
-                    dai-tdm-slot-num = <2>;
-                    dai-tdm-slot-width = <16>;
                 };
 
                 r_codec_dai: codec {
@@ -41,10 +37,6 @@
 
                 p_cpu_dai: cpu {
                     sound-dai = <&i2s_clk_consumer>;
-
-                // TDM slot configuration for stereo
-                    dai-tdm-slot-num = <2>;
-                    dai-tdm-slot-width = <16>;
                 };
 
                 p_codec_dai: codec {
