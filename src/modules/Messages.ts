@@ -153,7 +153,7 @@ export type UsbSettings = {
   customShutdown: boolean
   auxPower: boolean
   forty8Khz: boolean
-  spare3: boolean
+  debug: boolean
   spare4: boolean
   spare5: boolean
   nodeAddressHigh: number

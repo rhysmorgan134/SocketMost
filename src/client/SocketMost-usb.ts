@@ -14,6 +14,7 @@ import {
   UsbConfig,
   UsbSettings,
 } from '../modules/Messages'
+import winston from 'winston'
 const { exec } = require('child_process')
 
 export class SocketMostUsb extends EventEmitter {
@@ -24,9 +25,8 @@ export class SocketMostUsb extends EventEmitter {
   multiPartMessage?: TargetMostMessage<number[]>
   multiPartSequence: number
   position: number
-  sendInProg: boolean
-  sendBuffer: Buffer[]
-  sendTimeout?: NodeJS.Timeout
+  logger: winston.Logger
+  usbDebug: winston.Logger
   locked: boolean
   settings?: UsbSettings
   constructor() {
@@ -34,35 +34,12 @@ export class SocketMostUsb extends EventEmitter {
     this.portFound = false
     this.multiPartSequence = 0
     this.position = 0
-    this.sendInProg = false
-    this.sendBuffer = []
     this.locked = false
+    this.logger = winston.loggers.get('driverLogger')
+    this.usbDebug = winston.loggers.get('usbDebugger')
     this.portInterval = setInterval(() => {
       this.findPort()
     }, 1000)
-    this.on('messageSent', data => {
-      if (this.sendBuffer.length > 0) {
-        console.log('buffered amount pre: ', this.sendBuffer.length)
-        const buf = this.sendBuffer.shift()
-        console.log('buffered amount post: ', this.sendBuffer.length)
-        this.port!.write(buf)
-        if (this.sendBuffer.length === 0) {
-          this.sendInProg = false
-        }
-        if (this.sendTimeout) {
-          clearTimeout(this.sendTimeout)
-          this.sendTimeout = setTimeout(() => {
-            this.emit(Os8104Events.MessageSent, 0xff)
-          }, 150)
-        } else {
-          this.sendTimeout = setTimeout(() => {
-            this.emit(Os8104Events.MessageSent, 0xff)
-          }, 150)
-        }
-      } else {
-        this.sendInProg = false
-      }
-    })
   }
 
   findPort() {
@@ -217,13 +194,6 @@ export class SocketMostUsb extends EventEmitter {
         const data = Buffer.from(message.data)
         data.copy(buf, 12, 0)
         this.port!.write(buf)
-        // if (this.sendInProg) {
-        //   console.log('send overflow!!!! buffering....')
-        //   this.sendBuffer.push(buf)
-        // } else {
-        //   this.sendInProg = true
-        //   this.port!.write(buf)
-        // }
       }
     } else {
       this.emit(Os8104Events.MessageSent, Buffer.from([255]))
@@ -290,8 +260,6 @@ export class SocketMostUsb extends EventEmitter {
         //console.log('locked')
         this.emit(Os8104Events.Locked)
         this.locked = true
-        this.sendBuffer = []
-        this.sendInProg = false
         setTimeout(() => {
           this.getPosition()
         }, 10)
@@ -299,8 +267,6 @@ export class SocketMostUsb extends EventEmitter {
       case 6:
         //console.log('unlocked')
         this.locked = false
-        this.sendBuffer = []
-        this.sendInProg = false
         this.emit(Os8104Events.Unlocked)
         break
       case 7:
@@ -322,8 +288,11 @@ export class SocketMostUsb extends EventEmitter {
       case 11:
         this.parseSettings(buf)
         break
+      case 12:
+        this.usbDebug.info(buf.toString())
+        break
       default:
-      //console.log('none found: ', data)
+        console.log('none found: ', data)
     }
   }
 
@@ -355,7 +324,7 @@ export class SocketMostUsb extends EventEmitter {
       customShutdown: data.readUInt8(5) & 4 ? true : false,
       auxPower: data.readUInt8(5) & 8 ? true : false,
       forty8Khz: data.readUInt8(5) & 16 ? true : false,
-      spare3: data.readUInt8(5) & 32 ? true : false,
+      debug: data.readUInt8(5) & 32 ? true : false,
       spare4: data.readUInt8(5) & 64 ? true : false,
       spare5: data.readUInt8(5) & 128 ? true : false,
       nodeAddressHigh: data.readUInt8(6),
@@ -497,6 +466,15 @@ export class SocketMostUsb extends EventEmitter {
     this.port!.write(buf)
   }
 
+  forceSwitch = () => {
+    const buf = Buffer.alloc(4)
+    buf.writeUInt8(0x55, 0)
+    buf.writeUint8(1, 1)
+    buf.writeUint8(116, 2)
+    //console.log('sending position request', buf)
+    this.port!.write(buf)
+  }
+
   getAddress = () => {
     return {
       nodeAddressHigh: this.settings?.nodeAddressHigh,
@@ -511,6 +489,7 @@ export class SocketMostUsb extends EventEmitter {
     bitField |= (settings.customShutdown ? 1 : 0) << 2
     bitField |= (settings.auxPower ? 1 : 0) << 3
     bitField |= (settings.forty8Khz ? 1 : 0) << 4
+    bitField |= (settings.debug ? 1 : 0) << 5
     const buf = Buffer.alloc(51)
     buf.writeUInt8(0x55, 0)
     buf.writeUint8(40, 1)
