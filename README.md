@@ -1,4 +1,5 @@
-# There is currently an issue with the latest version of raspberry OS and i2s audio. If you wish to use i2s audio please stay with this version of raspberry os https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2023-12-06/
+# ~~There is currently an issue with the latest version of raspberry OS and i2s audio. If you wish to use i2s audio please stay with this version of raspberry os https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2023-12-06/~~
+# Issues have now been resolved, updated overlay and gpio numbering will work on latest release
 
 ## SocketMost for use with [PiMost](https://shop.moderndaymods.com/products/pimost-hat-usb-c-power-most25-only)
 
