@@ -291,6 +291,9 @@ export class SocketMostUsb extends EventEmitter {
       case 12:
         this.usbDebug.info(buf.toString())
         break
+      case 13:
+        this.parseDebugInfo(buf)
+        break
       default:
         console.log('none found: ', data)
     }
@@ -520,5 +523,18 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUint8(settings.microphone.sinkNumber, 50)
     console.log(buf)
     this.port!.write(buf)
+  }
+
+  getAllDebugInfo() {
+    const buf = Buffer.alloc(4)
+    buf.writeUInt8(0x55, 0)
+    buf.writeUint8(1, 1)
+    buf.writeUint8(117, 2)
+    //console.log('sending position request', buf)
+    this.port!.write(buf)
+  }
+
+  parseDebugInfo(buf: Buffer) {
+    this.usbDebug.info(buf.toString('hex').match(/[0-9]{2}/g))
   }
 }
