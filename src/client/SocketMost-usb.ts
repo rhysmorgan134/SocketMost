@@ -93,10 +93,10 @@ export class SocketMostUsb extends EventEmitter {
               this.parseData(data)
             })
 
-            setTimeout(() => {
-              // this.sendConfigRequest()
-              this.sendConnectMic()
-            }, 3000)
+            // setTimeout(() => {
+            //   // this.sendConfigRequest()
+            //   this.sendConnectMic()
+            // }, 3000)
 
             this.portFound = true
             this.sendCheckForLock()
@@ -138,6 +138,7 @@ export class SocketMostUsb extends EventEmitter {
     buf.writeUInt32LE(0x55, 0)
     buf.writeUint8(1, 1)
     buf.writeUint8(112, 2)
+    console.log('connecting Mic')
     //console.log('sending', buf)
     this.port!.write(buf)
   }
@@ -196,6 +197,8 @@ export class SocketMostUsb extends EventEmitter {
         this.port!.write(buf)
       }
     } else {
+      this.logger.error('not locked')
+      this.sendCheckForLock()
       this.emit(Os8104Events.MessageSent, Buffer.from([255]))
     }
   }
@@ -257,7 +260,7 @@ export class SocketMostUsb extends EventEmitter {
         this.emit(Os8104Events.MessageSent, buf)
         break
       case 5:
-        //console.log('locked')
+        this.logger.info('locked')
         this.emit(Os8104Events.Locked)
         this.locked = true
         setTimeout(() => {
@@ -266,6 +269,7 @@ export class SocketMostUsb extends EventEmitter {
         break
       case 6:
         //console.log('unlocked')
+        this.logger.error('unlocked')
         this.locked = false
         this.emit(Os8104Events.Unlocked)
         break
@@ -287,6 +291,8 @@ export class SocketMostUsb extends EventEmitter {
         break
       case 11:
         this.parseSettings(buf)
+        this.logger.info('settings received checking lock')
+        this.sendCheckForLock()
         break
       case 12:
         this.usbDebug.info(buf.toString())
@@ -349,11 +355,11 @@ export class SocketMostUsb extends EventEmitter {
         sinkNumber: data.readUInt8(42),
       },
       microphone: {
-        fblockId: 0,
-        targetAddressHigh: 0,
-        targetAddressLow: 0,
-        instanceId: 0,
-        sinkNumber: 0,
+        fblockId: data.readUInt8(43),
+        targetAddressHigh: data.readUInt8(44),
+        targetAddressLow: data.readUInt8(45),
+        instanceId: data.readUInt8(46),
+        sinkNumber: data.readUInt8(47),
       },
     }
     this.settings = settings
